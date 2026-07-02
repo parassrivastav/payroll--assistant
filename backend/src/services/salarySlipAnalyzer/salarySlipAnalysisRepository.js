@@ -9,6 +9,7 @@ function saveSalarySlipAnalysis(record) {
   const database = getDatabase();
   const payload = {
     analysis: record.analysis,
+    finance: record.finance,
     extraction: record.extraction,
     piiMasking: record.piiMasking,
     llm: record.llm

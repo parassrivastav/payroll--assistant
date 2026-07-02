@@ -3,6 +3,7 @@ const { extractDocumentTextWithDetails } = require("../../services/salarySlipAna
 const { maskPii } = require("../../services/salarySlipAnalyzer/piiSanitizer");
 const { analyzePayslipText, buildSalarySlipRequest } = require("../../services/salarySlipAnalyzer/salarySlipAnalyzer");
 const { saveSalarySlipAnalysis } = require("../../services/salarySlipAnalyzer/salarySlipAnalysisRepository");
+const { buildPayrollFinancePayload } = require("../../services/financeLogic/payrollCalculator");
 
 async function analyzeSalarySlip(req, res, next) {
   try {
@@ -45,8 +46,10 @@ async function analyzeSalarySlip(req, res, next) {
     }
 
     const result = await analyzePayslipText(sanitized.text);
+    const finance = buildPayrollFinancePayload(result.analysis);
     const persisted = saveSalarySlipAnalysis({
       analysis: result.analysis,
+      finance,
       sourceFilenameHash: file?.originalname ? hashValue(file.originalname) : null,
       extraction: {
         method: extraction.method,
@@ -65,6 +68,7 @@ async function analyzeSalarySlip(req, res, next) {
     const response = {
       id: persisted.id,
       analysis: result.analysis,
+      finance,
       piiMasking: {
         redactions: sanitized.redactions,
         sanitizedCharacterCount: sanitized.text.length

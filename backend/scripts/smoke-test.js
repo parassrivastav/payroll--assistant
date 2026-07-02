@@ -1,5 +1,6 @@
 const { maskPii } = require("../src/services/salarySlipAnalyzer/piiSanitizer");
 const { buildSalarySlipPrompt } = require("../src/prompts/salarySlipAnalyzer/salarySlipPrompt");
+const { buildPayrollFinancePayload } = require("../src/services/financeLogic/payrollCalculator");
 
 const sample = `
 Employee Name: Priya Sharma
@@ -26,6 +27,25 @@ if (sanitized.text.includes("Priya") || sanitized.text.includes("ABCDE1234F")) {
 
 if (!prompt[0].content || !prompt[1].content.includes("Sanitized salary slip text")) {
   throw new Error("Prompt builder smoke test failed.");
+}
+
+const finance = buildPayrollFinancePayload({
+  pay_period: "June 2026",
+  date: null,
+  basic: { amount: 50000, currency: "INR" },
+  hra: { amount: 20000, currency: "INR" },
+  lta: { amount: null, currency: null },
+  special_allowance: { amount: 20000, currency: "INR" },
+  provident_fund: { amount: 6000, currency: "INR" },
+  professional_tax: { amount: null, currency: null },
+  income_tax_tds: { amount: 3500, currency: "INR" },
+  reimbursements: { amount: 0, currency: "INR" },
+  gross_pay: { amount: 90000, currency: "INR" },
+  net_pay: { amount: 80500, currency: "INR" }
+});
+
+if (finance.calculated.total_deductions !== 9500 || finance.calculated.calculated_net !== 80500) {
+  throw new Error("Finance logic smoke test failed.");
 }
 
 console.log("Smoke test passed.");

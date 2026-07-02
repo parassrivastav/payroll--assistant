@@ -1,6 +1,6 @@
-const { extractDocumentTextWithDetails } = require("../services/documentTextExtractor");
-const { maskPii } = require("../services/piiSanitizer");
-const { analyzePayslipText, buildSalarySlipRequest } = require("../services/salarySlipAnalyzer");
+const { extractDocumentTextWithDetails } = require("../../services/salarySlipAnalyzer/documentTextExtractor");
+const { maskPii } = require("../../services/salarySlipAnalyzer/piiSanitizer");
+const { analyzePayslipText, buildSalarySlipRequest } = require("../../services/salarySlipAnalyzer/salarySlipAnalyzer");
 
 async function analyzeSalarySlip(req, res, next) {
   try {

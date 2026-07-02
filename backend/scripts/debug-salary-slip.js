@@ -1,9 +1,9 @@
 const fs = require("fs/promises");
 const path = require("path");
-const { extractDocumentTextWithDetails } = require("../src/services/documentTextExtractor");
-const { shutdownOcrWorker } = require("../src/services/ocrService");
-const { maskPii } = require("../src/services/piiSanitizer");
-const { analyzePayslipText, buildSalarySlipRequest } = require("../src/services/salarySlipAnalyzer");
+const { extractDocumentTextWithDetails } = require("../src/services/salarySlipAnalyzer/documentTextExtractor");
+const { shutdownOcrWorker } = require("../src/services/salarySlipAnalyzer/ocrService");
+const { maskPii } = require("../src/services/salarySlipAnalyzer/piiSanitizer");
+const { analyzePayslipText, buildSalarySlipRequest } = require("../src/services/salarySlipAnalyzer/salarySlipAnalyzer");
 
 const DEFAULT_DIR = path.resolve(__dirname, "../../salary-slips");
 

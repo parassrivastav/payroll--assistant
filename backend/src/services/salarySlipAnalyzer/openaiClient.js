@@ -1,5 +1,5 @@
 const OpenAI = require("openai");
-const { env } = require("../config/env");
+const { env } = require("../../config/env");
 
 let client;
 

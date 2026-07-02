@@ -1,6 +1,6 @@
-const { env } = require("../config/env");
-const { buildSalarySlipPrompt } = require("../prompts/salarySlipPrompt");
-const { payslipSchema } = require("../schemas/payslipSchema");
+const { env } = require("../../config/env");
+const { buildSalarySlipPrompt } = require("../../prompts/salarySlipAnalyzer/salarySlipPrompt");
+const { payslipSchema } = require("../../schemas/salarySlipAnalyzer/payslipSchema");
 const { getOpenAiClient } = require("./openaiClient");
 
 async function analyzePayslipText(sanitizedText) {

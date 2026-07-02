@@ -1,7 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const salarySlipRoutes = require("./routes/salarySlipRoutes");
+const salarySlipRoutes = require("./routes/salarySlipAnalyzer/salarySlipRoutes");
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();

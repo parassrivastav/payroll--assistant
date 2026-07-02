@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
-const { analyzeSalarySlip } = require("../controllers/salarySlipController");
-const { env } = require("../config/env");
+const { analyzeSalarySlip } = require("../../controllers/salarySlipAnalyzer/salarySlipController");
+const { env } = require("../../config/env");
 
 const router = express.Router();
 const upload = multer({

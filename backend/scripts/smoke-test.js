@@ -1,5 +1,5 @@
-const { maskPii } = require("../src/services/piiSanitizer");
-const { buildSalarySlipPrompt } = require("../src/prompts/salarySlipPrompt");
+const { maskPii } = require("../src/services/salarySlipAnalyzer/piiSanitizer");
+const { buildSalarySlipPrompt } = require("../src/prompts/salarySlipAnalyzer/salarySlipPrompt");
 
 const sample = `
 Employee Name: Priya Sharma

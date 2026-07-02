@@ -25,6 +25,11 @@ backend/salary-slip-*-report.txt
 backend/salary-slip-debug-report.txt
 backend/salary-slip-image-debug-report.txt
 
+# Local databases
+*.sqlite
+*.sqlite3
+backend/data/
+
 # Logs and OS/editor files
 npm-debug.log*
 *.log

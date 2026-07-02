@@ -1,6 +1,8 @@
+const crypto = require("crypto");
 const { extractDocumentTextWithDetails } = require("../../services/salarySlipAnalyzer/documentTextExtractor");
 const { maskPii } = require("../../services/salarySlipAnalyzer/piiSanitizer");
 const { analyzePayslipText, buildSalarySlipRequest } = require("../../services/salarySlipAnalyzer/salarySlipAnalyzer");
+const { saveSalarySlipAnalysis } = require("../../services/salarySlipAnalyzer/salarySlipAnalysisRepository");
 
 async function analyzeSalarySlip(req, res, next) {
   try {
@@ -43,8 +45,25 @@ async function analyzeSalarySlip(req, res, next) {
     }
 
     const result = await analyzePayslipText(sanitized.text);
+    const persisted = saveSalarySlipAnalysis({
+      analysis: result.analysis,
+      sourceFilenameHash: file?.originalname ? hashValue(file.originalname) : null,
+      extraction: {
+        method: extraction.method,
+        extractedCharacterCount: extraction.text.length
+      },
+      piiMasking: {
+        redactions: sanitized.redactions,
+        sanitizedCharacterCount: sanitized.text.length
+      },
+      llm: {
+        model: result.model,
+        usage: result.usage
+      }
+    });
 
     const response = {
+      id: persisted.id,
       analysis: result.analysis,
       piiMasking: {
         redactions: sanitized.redactions,
@@ -57,6 +76,10 @@ async function analyzeSalarySlip(req, res, next) {
       llm: {
         model: result.model,
         usage: result.usage
+      },
+      storage: {
+        id: persisted.id,
+        createdAt: persisted.createdAt
       }
     };
 
@@ -71,6 +94,10 @@ async function analyzeSalarySlip(req, res, next) {
   } catch (err) {
     next(err);
   }
+}
+
+function hashValue(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
 }
 
 module.exports = { analyzeSalarySlip };

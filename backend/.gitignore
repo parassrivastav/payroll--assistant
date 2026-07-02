@@ -1,6 +1,9 @@
 node_modules/
 .env
 *.traineddata
+data/
+*.sqlite
+*.sqlite3
 salary-slip-*-response.json
 salary-slip-*-report.txt
 salary-slip-debug-report.txt

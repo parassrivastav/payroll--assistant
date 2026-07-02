@@ -1,6 +1,7 @@
 const { maskPii } = require("../src/services/salarySlipAnalyzer/piiSanitizer");
 const { buildSalarySlipPrompt } = require("../src/prompts/salarySlipAnalyzer/salarySlipPrompt");
 const { buildPayrollFinancePayload } = require("../src/services/financeLogic/payrollCalculator");
+const { buildPayrollNarratorRequest } = require("../src/services/llmNarrator/payrollNarrator");
 
 const sample = `
 Employee Name: Priya Sharma
@@ -46,6 +47,19 @@ const finance = buildPayrollFinancePayload({
 
 if (finance.calculated.total_deductions !== 9500 || finance.calculated.calculated_net !== 80500) {
   throw new Error("Finance logic smoke test failed.");
+}
+
+const narratorRequest = buildPayrollNarratorRequest({
+  finance,
+  question: "Why is my net salary lower?"
+});
+
+if (
+  narratorRequest.messages.length !== 2 ||
+  narratorRequest.response_format.type !== "json_schema" ||
+  !narratorRequest.messages[1].content.includes("USER QUESTION")
+) {
+  throw new Error("Payroll narrator smoke test failed.");
 }
 
 console.log("Smoke test passed.");

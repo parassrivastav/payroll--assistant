@@ -3,11 +3,11 @@ const { buildPayrollNarratorPrompt } = require("../../prompts/llmNarrator/payrol
 const { payrollNarratorSchema } = require("../../schemas/llmNarrator/payrollNarratorSchema");
 const { getOpenAiClient } = require("../salarySlipAnalyzer/openaiClient");
 
-async function narratePayroll({ finance, question }) {
+async function narratePayroll({ finance, question, history }) {
   validateNarrationInput({ finance, question });
 
   const client = getOpenAiClient();
-  const request = buildPayrollNarratorRequest({ finance, question });
+  const request = buildPayrollNarratorRequest({ finance, question, history });
   const completion = await client.chat.completions.create(request);
   const content = completion.choices?.[0]?.message?.content;
 
@@ -26,10 +26,10 @@ async function narratePayroll({ finance, question }) {
   };
 }
 
-function buildPayrollNarratorRequest({ finance, question }) {
+function buildPayrollNarratorRequest({ finance, question, history = [] }) {
   return {
     model: env.openAiModel,
-    messages: buildPayrollNarratorPrompt({ finance, question }),
+    messages: buildPayrollNarratorPrompt({ finance, question, history }),
     response_format: {
       type: "json_schema",
       json_schema: {

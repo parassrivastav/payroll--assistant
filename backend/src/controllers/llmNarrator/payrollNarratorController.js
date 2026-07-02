@@ -3,19 +3,19 @@ const { narratePayroll, buildPayrollNarratorRequest } = require("../../services/
 
 async function narratePayrollFromBody(req, res, next) {
   try {
-    const { finance, question } = req.body || {};
+    const { finance, question, history } = req.body || {};
     const dryRun = isTruthy(req.query?.dryRun) || isTruthy(req.body?.dryRun);
 
     if (dryRun) {
       return res.json({
         dryRun: true,
         observability: {
-          llmRequest: buildPayrollNarratorRequest({ finance, question })
+          llmRequest: buildPayrollNarratorRequest({ finance, question, history })
         }
       });
     }
 
-    const result = await narratePayroll({ finance, question });
+    const result = await narratePayroll({ finance, question, history });
 
     res.json({
       answer: result.narration.answer,
@@ -33,7 +33,7 @@ async function narratePayrollFromBody(req, res, next) {
 async function narratePayrollFromStoredAnalysis(req, res, next) {
   try {
     const id = Number(req.params.id);
-    const { question } = req.body || {};
+    const { question, history } = req.body || {};
     const dryRun = isTruthy(req.query?.dryRun) || isTruthy(req.body?.dryRun);
 
     if (!id) {
@@ -58,12 +58,12 @@ async function narratePayrollFromStoredAnalysis(req, res, next) {
         dryRun: true,
         id,
         observability: {
-          llmRequest: buildPayrollNarratorRequest({ finance, question })
+          llmRequest: buildPayrollNarratorRequest({ finance, question, history })
         }
       });
     }
 
-    const result = await narratePayroll({ finance, question });
+    const result = await narratePayroll({ finance, question, history });
 
     res.json({
       id,

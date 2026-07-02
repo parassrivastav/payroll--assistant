@@ -1,0 +1,9 @@
+node_modules/
+.env
+*.traineddata
+salary-slip-*-response.json
+salary-slip-*-report.txt
+salary-slip-debug-report.txt
+salary-slip-image-debug-report.txt
+npm-debug.log*
+.DS_Store

@@ -20,15 +20,19 @@ import "./styles.css";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
-function App() {
-  const [messages, setMessages] = useState([
+function createInitialMessages(userId = "emp_001") {
+  return [
     {
       id: crypto.randomUUID(),
       role: "assistant",
       type: "text",
-      content: "Upload a salary slip, then ask me anything about your payroll."
+      content: `Logged in as ${userId}. Upload a salary slip, then ask me anything about your payroll.`
     }
-  ]);
+  ];
+}
+
+function App() {
+  const [messages, setMessages] = useState(() => createInitialMessages());
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState("emp_001");
@@ -87,6 +91,7 @@ function App() {
       });
       const payload = await parseJsonResponse(response);
       setSelectedUserId(userId);
+      resetUserScopedState(userId);
       setAuth(payload);
       setStatus("Ready");
     } catch (error) {
@@ -197,9 +202,12 @@ function App() {
           analysis: payload.salary_breakdown,
           extraction: payload.extraction
         });
+      } else {
+        setAnalysisState(null);
       }
     } catch (_error) {
       setSummary(null);
+      setAnalysisState(null);
     }
   }
 
@@ -340,6 +348,17 @@ function App() {
         content: error.message || "Something went wrong."
       }
     ]);
+  }
+
+  function resetUserScopedState(userId) {
+    setMessages(createInitialMessages(userId));
+    setInput("");
+    setFile(null);
+    setAnalysisState(null);
+    setSummary(null);
+    setMonthComparison(null);
+    setProofChecklist(null);
+    setTaxResult(null);
   }
 
   const finance = {

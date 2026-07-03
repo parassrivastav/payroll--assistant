@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Payroll Assistant Architecture</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: #eef2ef;
+        color: #18201c;
+        font-family: Inter, Arial, sans-serif;
+      }
+
+      .canvas {
+        width: 1600px;
+        height: 1220px;
+        padding: 42px 54px;
+        background:
+          linear-gradient(135deg, rgba(46, 125, 93, 0.08), transparent 34%),
+          linear-gradient(315deg, rgba(28, 75, 120, 0.08), transparent 34%),
+          #eef2ef;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 32px;
+        letter-spacing: 0;
+      }
+
+      .subtitle {
+        margin: 0 0 26px;
+        color: #5e6d65;
+        font-size: 16px;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: 260px 70px 315px 70px 315px 70px 330px;
+        grid-template-rows: 128px 128px 128px 128px 128px 142px;
+        gap: 18px 0;
+        align-items: center;
+      }
+
+      .box {
+        min-height: 104px;
+        padding: 18px 20px;
+        background: #ffffff;
+        border: 2px solid #cddbd3;
+        border-radius: 10px;
+        box-shadow: 0 14px 34px rgba(31, 48, 39, 0.08);
+      }
+
+      .box h2 {
+        margin: 0 0 8px;
+        font-size: 18px;
+        letter-spacing: 0;
+      }
+
+      .box p {
+        margin: 0;
+        color: #5d6b64;
+        font-size: 14px;
+        line-height: 1.35;
+      }
+
+      .thin {
+        min-height: 78px;
+      }
+
+      .frontend {
+        border-color: #87a99a;
+        background: #f6fbf8;
+      }
+
+      .security {
+        border-color: #9bb6ce;
+        background: #f6f9fc;
+      }
+
+      .llm {
+        border-color: #b99bca;
+        background: #fbf7fd;
+      }
+
+      .finance {
+        border-color: #a7b88f;
+        background: #fafcf6;
+      }
+
+      .storage {
+        border-color: #c6ad7e;
+        background: #fffaf0;
+      }
+
+      .output {
+        border-color: #86a7b8;
+        background: #f5fbfd;
+      }
+
+      .arrow {
+        position: relative;
+        height: 4px;
+        background: #4c5a53;
+        margin: 0 13px;
+      }
+
+      .arrow::after {
+        content: "";
+        position: absolute;
+        right: -2px;
+        top: 50%;
+        width: 13px;
+        height: 13px;
+        border-top: 4px solid #4c5a53;
+        border-right: 4px solid #4c5a53;
+        transform: translateY(-50%) rotate(45deg);
+      }
+
+      .down {
+        position: relative;
+        width: 4px;
+        height: 78px;
+        margin: 0 auto;
+        background: #4c5a53;
+      }
+
+      .down::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -2px;
+        width: 13px;
+        height: 13px;
+        border-right: 4px solid #4c5a53;
+        border-bottom: 4px solid #4c5a53;
+        transform: translateX(-50%) rotate(45deg);
+      }
+
+      .lane-label {
+        align-self: end;
+        color: #6b7871;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .legend .box {
+        min-height: 72px;
+        padding: 14px 16px;
+      }
+
+      .small {
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="canvas">
+      <h1>Payroll Assistant Architecture</h1>
+      <p class="subtitle">
+        Current implementation: authenticated dashboard, payslip extraction, deterministic finance logic, source-aware narration, audit logging, and configurable LLM providers.
+      </p>
+
+      <section class="grid">
+        <div class="box frontend" style="grid-column: 1; grid-row: 1;">
+          <h2>React Dashboard</h2>
+          <p>Login, payslip upload, salary summary, chat, month comparison, 80C simulator, proof checklist.</p>
+        </div>
+        <div class="arrow" style="grid-column: 2; grid-row: 1;"></div>
+        <div class="box security" style="grid-column: 3; grid-row: 1;">
+          <h2>Auth + Ownership</h2>
+          <p>Fake bearer token, EMPLOYEE/PAYROLL_ADMIN roles, employeeId ownership checks.</p>
+        </div>
+        <div class="arrow" style="grid-column: 4; grid-row: 1;"></div>
+        <div class="box" style="grid-column: 5; grid-row: 1;">
+          <h2>Payslip Upload API</h2>
+          <p>Protected upload endpoint with rate limit, file size limit, and audit metadata.</p>
+        </div>
+        <div class="arrow" style="grid-column: 6; grid-row: 1;"></div>
+        <div class="box" style="grid-column: 7; grid-row: 1;">
+          <h2>Text Extraction</h2>
+          <p>PDF text layer, DOCX/TXT parsing, image/scanned PDF OCR with optional warmup.</p>
+        </div>
+
+        <div class="down" style="grid-column: 7; grid-row: 2;"></div>
+
+        <div class="box security" style="grid-column: 7; grid-row: 3;">
+          <h2>PII Sanitizer</h2>
+          <p>Masks common PII before OpenAI text extraction. Audit log avoids raw text/base64.</p>
+        </div>
+        <div class="arrow" style="grid-column: 6; grid-row: 3; transform: rotate(180deg);"></div>
+        <div class="box llm" style="grid-column: 5; grid-row: 3;">
+          <h2>LLM Provider Switch</h2>
+          <p>USE_OPENAI=true keeps OpenAI flow. USE_OPENAI=false calls company wrapper.</p>
+        </div>
+        <div class="arrow" style="grid-column: 4; grid-row: 3; transform: rotate(180deg);"></div>
+        <div class="box llm" style="grid-column: 3; grid-row: 3;">
+          <h2>Extraction LLM</h2>
+          <p>Returns structured payroll JSON. Wrapper can receive raw PDF/image base64.</p>
+        </div>
+
+        <div class="down" style="grid-column: 3; grid-row: 4;"></div>
+
+        <div class="box storage" style="grid-column: 1; grid-row: 5;">
+          <h2>SQLite JSON Store</h2>
+          <p>Stores extracted payroll payload with employeeId metadata for ownership.</p>
+        </div>
+        <div class="arrow" style="grid-column: 2; grid-row: 5;"></div>
+        <div class="box finance" style="grid-column: 3; grid-row: 5;">
+          <h2>Finance Logic</h2>
+          <p>Salary summary, validation warnings, total earnings/deductions, calculated net.</p>
+        </div>
+        <div class="arrow" style="grid-column: 4; grid-row: 5;"></div>
+        <div class="box finance" style="grid-column: 5; grid-row: 5;">
+          <h2>Business Modules</h2>
+          <p>Month comparison, Section 80C simulator, investment proof checklist, history cache.</p>
+        </div>
+        <div class="arrow" style="grid-column: 6; grid-row: 5;"></div>
+        <div class="box output" style="grid-column: 7; grid-row: 5;">
+          <h2>Dashboard APIs</h2>
+          <p>Payroll summary, history, comparison, tax simulation, proof checklist responses.</p>
+        </div>
+
+        <div class="box llm" style="grid-column: 1; grid-row: 6;">
+          <h2>User Query</h2>
+          <p>Chat question with recent context and authenticated employee scope.</p>
+        </div>
+        <div class="arrow" style="grid-column: 2; grid-row: 6;"></div>
+        <div class="box llm" style="grid-column: 3 / span 3; grid-row: 6;">
+          <h2>Source-Aware LLM Narrator</h2>
+          <p>Prompt includes payroll_json + calculation_json + source_reference_json. If LLM fails, deterministic fallback answers from saved payroll data.</p>
+        </div>
+        <div class="arrow" style="grid-column: 6; grid-row: 6;"></div>
+        <div class="box output" style="grid-column: 7; grid-row: 6;">
+          <h2>Answer For User</h2>
+          <p>Natural-language answer with cited payslip/calculation sources when available.</p>
+        </div>
+      </section>
+
+      <section class="legend">
+        <div class="box security thin">
+          <h2>Security</h2>
+          <p class="small">CORS allowlist, rate limits, question validation, RBAC ownership.</p>
+        </div>
+        <div class="box storage thin">
+          <h2>Audit</h2>
+          <p class="small">Login, upload, summary, chat, tax, and checklist actions logged without raw PII.</p>
+        </div>
+        <div class="box finance thin">
+          <h2>Deterministic</h2>
+          <p class="small">Finance calculations, tax logic, proof checklist, and comparisons stay outside the LLM.</p>
+        </div>
+        <div class="box llm thin">
+          <h2>LLM Use</h2>
+          <p class="small">Only extraction and narration use LLM providers.</p>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,13 @@
+node_modules
+frontend/node_modules
+backend/node_modules
+frontend/dist
+backend/data
+salary-slips
+.git
+.env
+backend/.env
+*.pdf
+*.doc
+*.docx
+*.txt

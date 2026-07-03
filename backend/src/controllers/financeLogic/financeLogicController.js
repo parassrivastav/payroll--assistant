@@ -3,6 +3,7 @@ const {
   getLatestSalarySlipAnalyses,
   getLatestSalarySlipAnalysesForEmployee,
   getLatestSalarySlipAnalysisForEmployee,
+  listSalarySlipAnalyses,
   getSalarySlipAnalysisById
 } = require("../../services/salarySlipAnalyzer/salarySlipAnalysisRepository");
 const {
@@ -12,6 +13,7 @@ const {
 const { simulateSection80C } = require("../../services/financeLogic/section80CSimulator");
 const { getInvestmentProofChecklist } = require("../../services/financeLogic/investmentProofChecklist");
 const { buildMonthComparison } = require("../../services/financeLogic/monthComparisonService");
+const { getCachedHistory, setCachedHistory } = require("../../services/financeLogic/payrollHistoryCache");
 const { resolveRequestEmployee } = require("../../middleware/authMiddleware");
 const { logAudit } = require("../../services/audit/auditLogger");
 
@@ -119,6 +121,41 @@ function getMonthComparison(_req, res, next) {
   }
 }
 
+function getPayrollHistory(req, res, next) {
+  try {
+    const employeeId = resolveRequestEmployee(req);
+    const limit = req.query?.limit || 20;
+    const offset = req.query?.offset || 0;
+    const cacheKey = `${req.user.role}:${employeeId || "all"}:${limit}:${offset}`;
+    const cached = getCachedHistory(cacheKey);
+
+    if (cached) {
+      return res.json({ ...cached, cached: true });
+    }
+
+    const result = req.user.role === "PAYROLL_ADMIN" && !employeeId
+      ? listSalarySlipAnalyses({ limit, offset })
+      : listSalarySlipAnalyses({ employeeId, limit, offset });
+    const payload = {
+      ...result,
+      items: result.items.map((record) => ({
+        id: record.id,
+        employeeId: record.employeeId,
+        documentType: record.documentType,
+        createdAt: record.createdAt,
+        month: record.payload?.finance?.payroll?.month || record.payload?.analysis?.pay_period || null,
+        extractionMethod: record.payload?.extraction?.method || null
+      })),
+      cached: false
+    };
+
+    setCachedHistory(cacheKey, payload);
+    res.json(payload);
+  } catch (err) {
+    next(err);
+  }
+}
+
 function ensureRecordAccess(req, record) {
   const requestedEmployeeId = req.query?.employeeId || record.employeeId;
   const employeeId = resolveRequestEmployee({ ...req, query: { ...req.query, employeeId: requestedEmployeeId } });
@@ -138,5 +175,6 @@ module.exports = {
   getPayrollSummary,
   runSection80CSimulation,
   getProofChecklist,
-  getMonthComparison
+  getMonthComparison,
+  getPayrollHistory
 };

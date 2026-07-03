@@ -44,6 +44,9 @@ function App() {
   const [taxInputs, setTaxInputs] = useState({ alreadyDeclared80C: 80000, additionalInvestment: 50000 });
   const [taxResult, setTaxResult] = useState(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
+  const [isTaxRunning, setIsTaxRunning] = useState(false);
   const [status, setStatus] = useState("Ready");
   const fileInputRef = useRef(null);
 
@@ -53,9 +56,7 @@ function App() {
 
   useEffect(() => {
     if (!auth?.token) return;
-    loadLatestPayrollSummary();
-    loadMonthComparison();
-    loadProofChecklist();
+    refreshDashboardData();
   }, [auth?.token]);
 
   const canSend = useMemo(() => {
@@ -81,6 +82,7 @@ function App() {
   }
 
   async function loginAs(userId = selectedUserId) {
+    setIsLoggingIn(true);
     setStatus("Logging in");
 
     try {
@@ -97,6 +99,21 @@ function App() {
     } catch (error) {
       appendError(error);
       setStatus("Login required");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  }
+
+  async function refreshDashboardData() {
+    setIsLoadingDashboard(true);
+    try {
+      await Promise.all([
+        loadLatestPayrollSummary(),
+        loadMonthComparison(),
+        loadProofChecklist()
+      ]);
+    } finally {
+      setIsLoadingDashboard(false);
     }
   }
 
@@ -238,6 +255,7 @@ function App() {
 
   async function runTaxSimulation(event) {
     event.preventDefault();
+    setIsTaxRunning(true);
     setStatus("Running 80C simulator");
 
     try {
@@ -253,6 +271,7 @@ function App() {
     } catch (error) {
       appendError(error);
     } finally {
+      setIsTaxRunning(false);
       setStatus("Ready");
     }
   }
@@ -389,7 +408,10 @@ function App() {
               <option value="emp_002">emp_002</option>
               <option value="admin_001">admin_001</option>
             </select>
-            <button type="submit" className="secondary-button">Login</button>
+            <button type="submit" className="secondary-button" disabled={isLoggingIn}>
+              {isLoggingIn ? <Loader2 className="spin" size={15} /> : null}
+              Login
+            </button>
             <span>{auth?.user ? `${auth.user.role}` : "Not signed in"}</span>
           </form>
           <div className="status-pill">
@@ -400,16 +422,17 @@ function App() {
 
         <section className="dashboard-grid">
           <div className="left-stack">
-            <SalaryCards finance={finance} />
-            <SalaryBreakdown summary={summary} finance={finance} />
-            <MonthComparison comparison={monthComparison} />
+            <SalaryCards finance={finance} isLoading={isLoadingDashboard} />
+            <SalaryBreakdown summary={summary} finance={finance} isLoading={isLoadingDashboard} />
+            <MonthComparison comparison={monthComparison} isLoading={isLoadingDashboard} />
             <TaxSimulator
               taxInputs={taxInputs}
               setTaxInputs={setTaxInputs}
               taxResult={taxResult}
               runTaxSimulation={runTaxSimulation}
+              isRunning={isTaxRunning}
             />
-            <ProofChecklist proofChecklist={proofChecklist} />
+            <ProofChecklist proofChecklist={proofChecklist} isLoading={isLoadingDashboard} />
           </div>
 
           <section className="chat-panel">
@@ -501,7 +524,7 @@ function App() {
   );
 }
 
-function SalaryCards({ finance }) {
+function SalaryCards({ finance, isLoading }) {
   const payroll = finance?.payroll || {};
   const calculated = finance?.calculated || {};
   const cards = [
@@ -515,18 +538,20 @@ function SalaryCards({ finance }) {
     <section className="panel">
       <PanelTitle title="Salary Summary" subtitle={payroll.month || "Upload a payslip to populate values"} />
       <div className="value-grid">
-        {cards.map(([label, value]) => (
-          <div className="value-card" key={label}>
-            <span>{label}</span>
-            <strong>{value}</strong>
-          </div>
-        ))}
+        {isLoading
+          ? Array.from({ length: 4 }).map((_, index) => <SkeletonCard key={index} />)
+          : cards.map(([label, value]) => (
+              <div className="value-card" key={label}>
+                <span>{label}</span>
+                <strong>{value}</strong>
+              </div>
+            ))}
       </div>
     </section>
   );
 }
 
-function SalaryBreakdown({ summary, finance }) {
+function SalaryBreakdown({ summary, finance, isLoading }) {
   const payroll = finance?.payroll || {};
   const calculated = finance?.calculated || {};
   const structured = summary?.summary || {};
@@ -555,8 +580,14 @@ function SalaryBreakdown({ summary, finance }) {
         title="Salary Breakdown"
         subtitle={summary?.extraction?.method ? `Extracted via ${summary.extraction.method}` : "Waiting for payslip"}
       />
-      <BreakdownTable title="Earnings" rows={earningsRows} currency={payroll.currency} />
-      <BreakdownTable title="Deductions" rows={deductionRows} currency={payroll.currency} />
+      {isLoading ? (
+        <SkeletonRows count={8} />
+      ) : (
+        <>
+          <BreakdownTable title="Earnings" rows={earningsRows} currency={payroll.currency} />
+          <BreakdownTable title="Deductions" rows={deductionRows} currency={payroll.currency} />
+        </>
+      )}
       <div className="calculated-line">
         <span>Calculated Net Pay</span>
         <strong>{formatMoney(calculated.calculated_net_pay ?? calculated.calculated_net, payroll.currency)}</strong>
@@ -602,7 +633,7 @@ function BreakdownTable({ title, rows, currency }) {
   );
 }
 
-function MonthComparison({ comparison }) {
+function MonthComparison({ comparison, isLoading }) {
   const rows = comparison?.fields?.filter((field) => (
     ["gross_pay", "net_pay", "income_tax_tds", "pf", "reimbursements"].includes(field.key)
   )) || [];
@@ -615,6 +646,9 @@ function MonthComparison({ comparison }) {
           ? `${comparison.previous_month} to ${comparison.current_month}`
           : "Comparing current and previous month"}
       />
+      {isLoading ? (
+        <SkeletonRows count={5} />
+      ) : (
       <table className="comparison-table">
         <thead>
           <tr>
@@ -637,6 +671,7 @@ function MonthComparison({ comparison }) {
           ))}
         </tbody>
       </table>
+      )}
       {comparison?.explanation?.length > 0 && (
         <ul className="comparison-explanation">
           {comparison.explanation.map((line) => (
@@ -648,7 +683,7 @@ function MonthComparison({ comparison }) {
   );
 }
 
-function TaxSimulator({ taxInputs, setTaxInputs, taxResult, runTaxSimulation }) {
+function TaxSimulator({ taxInputs, setTaxInputs, taxResult, runTaxSimulation, isRunning }) {
   return (
     <section className="panel">
       <PanelTitle title="80C Tax-Saving Simulator" subtitle="Simplified assumption, not tax advice" />
@@ -671,9 +706,9 @@ function TaxSimulator({ taxInputs, setTaxInputs, taxResult, runTaxSimulation }) 
             onChange={(event) => setTaxInputs((current) => ({ ...current, additionalInvestment: event.target.value }))}
           />
         </label>
-        <button type="submit" className="secondary-button">
-          <Calculator size={16} />
-          Run simulator
+        <button type="submit" className="secondary-button" disabled={isRunning}>
+          {isRunning ? <Loader2 className="spin" size={16} /> : <Calculator size={16} />}
+          {isRunning ? "Running" : "Run simulator"}
         </button>
       </form>
       {taxResult && (
@@ -698,11 +733,14 @@ function TaxSimulator({ taxInputs, setTaxInputs, taxResult, runTaxSimulation }) 
   );
 }
 
-function ProofChecklist({ proofChecklist }) {
+function ProofChecklist({ proofChecklist, isLoading }) {
   const items = proofChecklist?.items || [];
   return (
     <section className="panel">
       <PanelTitle title="Investment Proof Checklist" subtitle={proofChecklist?.note || "Mock proof items"} />
+      {isLoading ? (
+        <SkeletonRows count={3} />
+      ) : (
       <div className="proof-list">
         {items.map((item) => (
           <div className="proof-item" key={item.key}>
@@ -715,8 +753,28 @@ function ProofChecklist({ proofChecklist }) {
           </div>
         ))}
       </div>
+      )}
       <p className="missing-summary">{proofChecklist?.summary?.missing_proof_summary || "Loading proof checklist..."}</p>
     </section>
+  );
+}
+
+function SkeletonCard() {
+  return (
+    <div className="value-card skeleton-card">
+      <span className="skeleton-line short" />
+      <strong className="skeleton-line" />
+    </div>
+  );
+}
+
+function SkeletonRows({ count }) {
+  return (
+    <div className="skeleton-rows">
+      {Array.from({ length: count }).map((_, index) => (
+        <span className="skeleton-line" key={index} />
+      ))}
+    </div>
   );
 }
 

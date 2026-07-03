@@ -129,6 +129,18 @@ describe("authentication and ownership", () => {
     expect(response.body.id).toBe(record.id);
   });
 
+  test("employee history is paginated and scoped", async () => {
+    createRecord("emp_001");
+    createRecord("emp_002");
+    const response = await request(app)
+      .get("/payroll/history?limit=1&offset=0")
+      .set("Authorization", emp1Token);
+    expect(response.status).toBe(200);
+    expect(response.body.items).toHaveLength(1);
+    expect(response.body.items[0].employeeId).toBe("emp_001");
+    expect(response.body.limit).toBe(1);
+  });
+
   test("employee cannot access another employee payroll", async () => {
     const record = createRecord("emp_002");
     const response = await request(app)
@@ -222,6 +234,19 @@ describe("tax assumptions", () => {
     expect(response.status).toBe(200);
     expect(response.body.inputs.already_declared_80c).toBe(0);
     expect(response.body.inputs.additional_80c_investment).toBe(0);
+  });
+});
+
+describe("chat validation", () => {
+  test("question field is validated", async () => {
+    const record = createRecord("emp_001");
+    const response = await request(app)
+      .post(`/payroll/${record.id}/narrate`)
+      .set("Authorization", emp1Token)
+      .send({ question: "" });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error.code).toBe("INVALID_QUESTION");
   });
 });
 

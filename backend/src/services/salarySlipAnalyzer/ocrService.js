@@ -47,6 +47,10 @@ async function getWorker() {
   return workerPromise;
 }
 
+async function warmupOcrWorker() {
+  await getWorker();
+}
+
 async function shutdownOcrWorker() {
   if (!workerPromise) {
     return;
@@ -57,4 +61,4 @@ async function shutdownOcrWorker() {
   await worker.terminate();
 }
 
-module.exports = { ocrImageBuffer, shutdownOcrWorker };
+module.exports = { ocrImageBuffer, shutdownOcrWorker, warmupOcrWorker };

@@ -14,7 +14,17 @@
 - `llmNarrator`: builds grounded prompts with payroll JSON, calculation JSON, and source references.
 - `auth`: simple mock users and fake bearer tokens.
 - `audit`: minimal in-memory audit entries.
+- `validation`: lightweight request validation for chat questions and related inputs.
+- `middleware`: CORS allowlist, rate limiting, auth, and error handling.
 
 ## Request Boundaries
 
 Business calculations remain in backend code so they are deterministic and testable. The LLM does not decide salary totals, tax savings, proof status, or month comparison values.
+
+## Production Readiness Additions
+
+- Dockerfiles for backend and frontend.
+- `docker-compose.yml` for local container evaluation.
+- GitHub Actions CI for backend tests/smoke checks and frontend build.
+- Optional OCR worker warmup with `WARM_OCR_ON_STARTUP=true`.
+- Paginated payroll history endpoint with short in-memory caching.

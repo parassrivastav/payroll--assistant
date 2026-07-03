@@ -3,19 +3,31 @@ const { buildPayrollNarratorPrompt } = require("../../prompts/llmNarrator/payrol
 const { payrollNarratorSchema } = require("../../schemas/llmNarrator/payrollNarratorSchema");
 const { buildSourceReference } = require("../financeLogic/payrollCalculator");
 const { isOpenAiProvider, queryLLM } = require("../llm/llmProvider");
+const { buildNarrationFallback } = require("./narrationFallback");
 
 async function narratePayroll({ finance, question, history, analysis }) {
   validateNarrationInput({ finance, question });
 
   const request = buildPayrollNarratorRequest({ finance, question, history, analysis });
-  const llmResult = isOpenAiProvider()
-    ? await queryLLM({ openAiRequest: request })
-    : await queryLLM({
-        prompt: buildNarratorWrapperPrompt(request.messages),
-        metadata: {
-          flow: "payroll-narration"
-        }
-      });
+  let llmResult;
+  try {
+    llmResult = isOpenAiProvider()
+      ? await queryLLM({ openAiRequest: request })
+      : await queryLLM({
+          prompt: buildNarratorWrapperPrompt(request.messages),
+          metadata: {
+            flow: "payroll-narration"
+          }
+        });
+  } catch (err) {
+    return {
+      narration: buildNarrationFallback({ finance: withSourceReference(finance, analysis), question }),
+      usage: null,
+      model: "deterministic-fallback",
+      request,
+      fallbackReason: err.code || err.message
+    };
+  }
 
   if (!llmResult.content) {
     const err = new Error("LLM provider returned an empty payroll narration.");

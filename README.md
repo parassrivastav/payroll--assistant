@@ -12,6 +12,7 @@ Demonstrate an end-to-end payroll assistant flow:
 - Validate and calculate salary values in backend code.
 - Answer payroll questions using only provided payroll data.
 - Provide simple auth, ownership checks, audit logs, tax simulation, proof checklist, and month comparison.
+- Include production-readiness basics such as CORS allowlisting, rate limiting, validation, tests, Docker, CI, and documented limitations.
 
 ## Architecture Overview
 
@@ -151,6 +152,13 @@ Authorization: Bearer mock-token-emp_001
 
 Employees can access only their own payroll, upload, chat, tax, checklist, and document-derived data. A payroll admin can access employee summaries in this demo.
 
+## Security Hardening
+
+- CORS is controlled by `CORS_ALLOWED_ORIGINS`.
+- Rate limits are applied globally and more tightly on login, upload, and chat routes.
+- Chat questions are validated for type, presence, and length.
+- Audit logs avoid raw payslip text, base64 payloads, PAN, bank details, and unnecessary PII.
+
 ## Audit Logging
 
 Audit logs are kept in a lightweight in-memory array for demo/testing. Logged actions include login, payslip upload, payroll summary view, chat query, tax simulation, and proof checklist view.
@@ -181,6 +189,12 @@ npm install
 cp .env.example .env
 # set OPENAI_API_KEY or LLM_WRAPPER_API_TOKEN in .env depending on USE_OPENAI
 npm start
+```
+
+Docker:
+
+```bash
+docker compose up --build
 ```
 
 Frontend:
@@ -232,6 +246,13 @@ curl http://localhost:4000/payroll/summary \
   -H "Authorization: Bearer mock-token-emp_001"
 ```
 
+Get paginated payroll history:
+
+```bash
+curl "http://localhost:4000/payroll/history?limit=10&offset=0" \
+  -H "Authorization: Bearer mock-token-emp_001"
+```
+
 Ask narrator:
 
 ```bash
@@ -261,6 +282,10 @@ curl -X POST http://localhost:4000/tax/80c/simulate \
 7. Run the 80C simulator.
 8. Review the proof checklist.
 
+Dashboard screenshot:
+
+![Payroll Assistant dashboard](docs/screenshots/dashboard.png)
+
 ## Known Limitations
 
 - Mocked OCR/extraction may be used in demo/test paths.
@@ -270,3 +295,5 @@ curl -X POST http://localhost:4000/tax/80c/simulate \
 - Real PDF/image PII redaction would need a stronger OCR/PDF redaction pipeline.
 - Auth uses fake bearer tokens, not production JWT/session security.
 - Audit logging is in-memory for assignment simplicity.
+- Rate limiting is in-process and would need shared storage for multi-instance deployment.
+- OCR warmup is optional with `WARM_OCR_ON_STARTUP=true`; full production OCR needs worker-pool sizing.

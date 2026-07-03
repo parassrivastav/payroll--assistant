@@ -41,7 +41,9 @@ Why is my net salary lower?
 
 11. Show the investment proof checklist and missing proof summary.
 
-12. Optionally demonstrate ownership:
+12. Show the saved UI screenshot in `docs/screenshots/dashboard.png` for evaluator documentation.
+
+13. Optionally demonstrate ownership:
 
 - Login as `emp_001`.
 - Try accessing `emp_002` data with `employeeId=emp_002`.

@@ -22,6 +22,12 @@ Employees can access only their own payroll data. If `emp_001` requests `emp_002
 
 The sanitizer masks common PII before sending text to the extraction LLM. Audit logs intentionally avoid raw payslip text, base64 data, PAN, bank details, and unnecessary PII.
 
+## CORS, Rate Limits, And Validation
+
+- CORS uses `CORS_ALLOWED_ORIGINS` instead of allowing every browser origin.
+- General, login, upload, and chat rate limits protect the API from accidental abuse.
+- Chat questions are validated for string type, required content, and maximum length.
+
 ## Limitations
 
 This is not production-grade security. Real PDF/image PII redaction would require stronger OCR, coordinate-aware PDF/image redaction, encryption controls, secrets management, and security review.

@@ -2,10 +2,12 @@ const { getSalarySlipAnalysisById } = require("../../services/salarySlipAnalyzer
 const { narratePayroll, buildPayrollNarratorRequest } = require("../../services/llmNarrator/payrollNarrator");
 const { resolveRequestEmployee } = require("../../middleware/authMiddleware");
 const { logAudit } = require("../../services/audit/auditLogger");
+const { validateQuestion } = require("../../services/validation/questionValidator");
 
 async function narratePayrollFromBody(req, res, next) {
   try {
-    const { finance, question, history, analysis } = req.body || {};
+    const { finance, history, analysis } = req.body || {};
+    const question = validateQuestion(req.body?.question);
     const dryRun = isTruthy(req.query?.dryRun) || isTruthy(req.body?.dryRun);
     const employeeId = resolveRequestEmployee(req);
 
@@ -43,7 +45,8 @@ async function narratePayrollFromBody(req, res, next) {
 async function narratePayrollFromStoredAnalysis(req, res, next) {
   try {
     const id = Number(req.params.id);
-    const { question, history } = req.body || {};
+    const { history } = req.body || {};
+    const question = validateQuestion(req.body?.question);
     const dryRun = isTruthy(req.query?.dryRun) || isTruthy(req.body?.dryRun);
 
     if (!id) {

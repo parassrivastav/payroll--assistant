@@ -83,6 +83,37 @@ function getLatestSalarySlipAnalysesForEmployee(employeeId, limit = 2) {
     .map(mapRow);
 }
 
+function listSalarySlipAnalyses({ employeeId, limit = 20, offset = 0 } = {}) {
+  const boundedLimit = Math.min(Math.max(Number(limit) || 20, 1), 50);
+  const boundedOffset = Math.max(Number(offset) || 0, 0);
+  const database = getDatabase();
+
+  if (employeeId) {
+    const rows = database
+      .prepare(`
+        SELECT * FROM salary_slip_documents
+        WHERE json_extract(payload_json, '$.employeeId') = ?
+        ORDER BY id DESC
+        LIMIT ? OFFSET ?
+      `)
+      .all(employeeId, boundedLimit, boundedOffset);
+    const total = database
+      .prepare("SELECT COUNT(*) AS count FROM salary_slip_documents WHERE json_extract(payload_json, '$.employeeId') = ?")
+      .get(employeeId).count;
+
+    return { items: rows.map(mapRow), total, limit: boundedLimit, offset: boundedOffset };
+  }
+
+  const rows = database
+    .prepare("SELECT * FROM salary_slip_documents ORDER BY id DESC LIMIT ? OFFSET ?")
+    .all(boundedLimit, boundedOffset);
+  const total = database
+    .prepare("SELECT COUNT(*) AS count FROM salary_slip_documents")
+    .get().count;
+
+  return { items: rows.map(mapRow), total, limit: boundedLimit, offset: boundedOffset };
+}
+
 function getDatabase() {
   if (!db) {
     const dbPath = path.resolve(process.cwd(), env.sqliteDbPath);
@@ -128,5 +159,6 @@ module.exports = {
   getLatestSalarySlipAnalysis,
   getLatestSalarySlipAnalysisForEmployee,
   getLatestSalarySlipAnalyses,
-  getLatestSalarySlipAnalysesForEmployee
+  getLatestSalarySlipAnalysesForEmployee,
+  listSalarySlipAnalyses
 };

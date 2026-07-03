@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 const salarySlipRoutes = require("./routes/salarySlipAnalyzer/salarySlipRoutes");
 const payrollNarratorRoutes = require("./routes/llmNarrator/payrollNarratorRoutes");
+const financeLogicRoutes = require("./routes/financeLogic/financeLogicRoutes");
 const { errorHandler } = require("./middleware/errorHandler");
 
 const app = express();
@@ -17,6 +18,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/", salarySlipRoutes);
 app.use("/", payrollNarratorRoutes);
+app.use("/", financeLogicRoutes);
 app.use(errorHandler);
 
 module.exports = app;

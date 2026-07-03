@@ -2,6 +2,8 @@ const { maskPii } = require("../src/services/salarySlipAnalyzer/piiSanitizer");
 const { buildSalarySlipPrompt } = require("../src/prompts/salarySlipAnalyzer/salarySlipPrompt");
 const { buildPayrollFinancePayload } = require("../src/services/financeLogic/payrollCalculator");
 const { buildPayrollNarratorRequest } = require("../src/services/llmNarrator/payrollNarrator");
+const { simulateSection80C } = require("../src/services/financeLogic/section80CSimulator");
+const { getInvestmentProofChecklist } = require("../src/services/financeLogic/investmentProofChecklist");
 
 const sample = `
 Employee Name: Priya Sharma
@@ -60,6 +62,21 @@ if (
   !narratorRequest.messages[1].content.includes("USER QUESTION")
 ) {
   throw new Error("Payroll narrator smoke test failed.");
+}
+
+const taxSimulation = simulateSection80C({
+  additionalInvestment: 50000,
+  alreadyDeclared80C: 120000
+});
+
+if (taxSimulation.result.eligible_extra_80c !== 30000 || taxSimulation.result.estimated_tax_saving !== 6000) {
+  throw new Error("80C simulator smoke test failed.");
+}
+
+const proofChecklist = getInvestmentProofChecklist();
+
+if (proofChecklist.summary.missing_count !== 2 || !proofChecklist.summary.missing_items.includes("ELSS")) {
+  throw new Error("Proof checklist smoke test failed.");
 }
 
 console.log("Smoke test passed.");

@@ -42,6 +42,14 @@ function getSalarySlipAnalysisById(id) {
   return row ? mapRow(row) : null;
 }
 
+function getLatestSalarySlipAnalysis() {
+  const row = getDatabase()
+    .prepare("SELECT * FROM salary_slip_documents ORDER BY id DESC LIMIT 1")
+    .get();
+
+  return row ? mapRow(row) : null;
+}
+
 function getDatabase() {
   if (!db) {
     const dbPath = path.resolve(process.cwd(), env.sqliteDbPath);
@@ -82,5 +90,6 @@ function mapRow(row) {
 
 module.exports = {
   saveSalarySlipAnalysis,
-  getSalarySlipAnalysisById
+  getSalarySlipAnalysisById,
+  getLatestSalarySlipAnalysis
 };

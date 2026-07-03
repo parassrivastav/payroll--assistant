@@ -208,6 +208,36 @@ tr:last-child td {
   border-bottom: 0;
 }
 
+.breakdown-group {
+  margin-top: 12px;
+}
+
+.breakdown-group:first-of-type {
+  margin-top: 0;
+}
+
+.calculated-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: #eef6f2;
+  border: 1px solid #cfe1d8;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.calculated-line span {
+  color: #53635b;
+  font-weight: 600;
+}
+
+.calculated-line strong {
+  color: #173a2d;
+}
+
 .ytd-block {
   margin-top: 14px;
   padding: 12px;
@@ -237,6 +267,20 @@ tr:last-child td {
 
 .ytd-grid strong {
   font-size: 13px;
+}
+
+.warning-list {
+  margin-top: 12px;
+  padding: 12px;
+  background: #fff8ea;
+  border: 1px solid #efd59d;
+  border-radius: 8px;
+}
+
+.warning-list p {
+  color: #745619;
+  font-size: 13px;
+  margin-top: 6px;
 }
 
 .tax-form {

@@ -41,6 +41,7 @@ function App() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
+    loadLatestPayrollSummary();
     loadProofChecklist();
   }, []);
 
@@ -141,6 +142,28 @@ function App() {
             extraction: fallbackPayload.extraction
           }
         : null;
+    }
+  }
+
+  async function loadLatestPayrollSummary() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/payroll/summary`);
+      const payload = await parseJsonResponse(response);
+      setSummary(payload);
+
+      if (payload.source === "latest_extracted" && payload.id) {
+        setAnalysisState({
+          id: payload.id,
+          finance: {
+            payroll: payload.payroll_json,
+            calculated: payload.calculated_values
+          },
+          analysis: payload.salary_breakdown,
+          extraction: payload.extraction
+        });
+      }
+    } catch (_error) {
+      setSummary(null);
     }
   }
 
@@ -270,9 +293,9 @@ function App() {
     ]);
   }
 
-  const finance = analysisState?.finance || {
-    payroll: summary?.payroll_json,
-    calculated: summary?.calculated_values
+  const finance = {
+    payroll: summary?.payroll_json || analysisState?.finance?.payroll,
+    calculated: summary?.calculated_values || analysisState?.finance?.calculated
   };
 
   return (
@@ -402,8 +425,8 @@ function SalaryCards({ finance }) {
   const cards = [
     ["Gross pay", formatMoney(payroll.gross, payroll.currency)],
     ["Net pay", formatMoney(payroll.net, payroll.currency)],
-    ["Total deductions", formatMoney(calculated.total_deductions, payroll.currency)],
-    ["Calculated net", formatMoney(calculated.calculated_net, payroll.currency)]
+    ["Total earnings", formatMoney(calculated.total_earnings, payroll.currency)],
+    ["Total deductions", formatMoney(calculated.total_deductions, payroll.currency)]
   ];
 
   return (
@@ -423,20 +446,26 @@ function SalaryCards({ finance }) {
 
 function SalaryBreakdown({ summary, finance }) {
   const payroll = finance?.payroll || {};
-  const breakdown = summary?.salary_breakdown || {};
-  const ytd = summary?.year_to_date || {};
-  const rows = [
+  const calculated = finance?.calculated || {};
+  const structured = summary?.summary || {};
+  const earningsRows = [
     ["Basic salary", payroll.basic],
     ["HRA", payroll.hra],
     ["LTA", payroll.lta],
     ["Special allowance", payroll.special_allowance],
-    ["Reimbursements", payroll.reimbursements],
+    ["Reimbursements", payroll.reimbursements]
+  ];
+  const deductionRows = [
     ["PF", payroll.pf],
     ["Professional tax", payroll.professional_tax],
-    ["TDS", payroll.tds],
-    ["Gross pay", payroll.gross],
-    ["Net pay", payroll.net]
+    ["Income tax/TDS", payroll.tds]
   ];
+  const ytdRows = [
+    ["Gross pay", structured.year_to_date?.gross_pay],
+    ["PF", structured.year_to_date?.provident_fund],
+    ["Income tax/TDS", structured.year_to_date?.income_tax_tds]
+  ];
+  const validationWarnings = structured.validation_warnings || [];
 
   return (
     <section className="panel">
@@ -444,35 +473,50 @@ function SalaryBreakdown({ summary, finance }) {
         title="Salary Breakdown"
         subtitle={summary?.extraction?.method ? `Extracted via ${summary.extraction.method}` : "Waiting for payslip"}
       />
+      <BreakdownTable title="Earnings" rows={earningsRows} currency={payroll.currency} />
+      <BreakdownTable title="Deductions" rows={deductionRows} currency={payroll.currency} />
+      <div className="calculated-line">
+        <span>Calculated Net Pay</span>
+        <strong>{formatMoney(calculated.calculated_net_pay ?? calculated.calculated_net, payroll.currency)}</strong>
+      </div>
+      <div className="ytd-block">
+        <h3>Year-to-Date</h3>
+        <div className="ytd-grid">
+          {ytdRows.map(([label, value]) => (
+            <div key={label}>
+              <span>{label}</span>
+              <strong>{formatMoney(value?.amount, value?.currency || payroll.currency)}</strong>
+            </div>
+          ))}
+        </div>
+      </div>
+      {validationWarnings.length > 0 && (
+        <div className="warning-list">
+          <h3>Validation Warnings</h3>
+          {validationWarnings.map((warning) => (
+            <p key={warning}>{warning}</p>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function BreakdownTable({ title, rows, currency }) {
+  return (
+    <div className="breakdown-group">
+      <h3>{title}</h3>
       <table>
         <tbody>
           {rows.map(([label, value]) => (
             <tr key={label}>
               <th>{label}</th>
-              <td>{formatMoney(value, payroll.currency)}</td>
+              <td>{formatMoney(value, currency)}</td>
             </tr>
           ))}
         </tbody>
       </table>
-      <div className="ytd-block">
-        <h3>YTD Values</h3>
-        {Object.keys(ytd).length ? (
-          <div className="ytd-grid">
-            {Object.entries(ytd).map(([key, value]) => (
-              <div key={key}>
-                <span>{prettyLabel(key)}</span>
-                <strong>{formatMoney(value?.amount, value?.currency || payroll.currency)}</strong>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>No YTD values found in this payslip.</p>
-        )}
-      </div>
-      {breakdown.net_pay && (
-        <p className="muted-note">Raw extracted net pay: {formatMoney(breakdown.net_pay.amount, breakdown.net_pay.currency)}</p>
-      )}
-    </section>
+    </div>
   );
 }
 
@@ -596,10 +640,6 @@ function formatMoney(value, currency = "INR") {
     currency: currency || "INR",
     maximumFractionDigits: 0
   }).format(value);
-}
-
-function prettyLabel(value) {
-  return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 createRoot(document.getElementById("root")).render(<App />);

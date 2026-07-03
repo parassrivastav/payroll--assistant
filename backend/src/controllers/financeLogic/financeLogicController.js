@@ -1,5 +1,11 @@
-const { getSalarySlipAnalysisById } = require("../../services/salarySlipAnalyzer/salarySlipAnalysisRepository");
-const { buildPayrollSummaryFromRecord } = require("../../services/financeLogic/payrollSummaryBuilder");
+const {
+  getLatestSalarySlipAnalysis,
+  getSalarySlipAnalysisById
+} = require("../../services/salarySlipAnalyzer/salarySlipAnalysisRepository");
+const {
+  buildMockPayrollSummary,
+  buildPayrollSummaryFromRecord
+} = require("../../services/financeLogic/payrollSummaryBuilder");
 const { simulateSection80C } = require("../../services/financeLogic/section80CSimulator");
 const { getInvestmentProofChecklist } = require("../../services/financeLogic/investmentProofChecklist");
 
@@ -16,6 +22,15 @@ function getPayrollSummary(req, res, next) {
     }
 
     res.json(buildPayrollSummaryFromRecord(record));
+  } catch (err) {
+    next(err);
+  }
+}
+
+function getLatestPayrollSummary(_req, res, next) {
+  try {
+    const record = getLatestSalarySlipAnalysis();
+    res.json(record ? buildPayrollSummaryFromRecord(record) : buildMockPayrollSummary());
   } catch (err) {
     next(err);
   }
@@ -41,6 +56,7 @@ function getProofChecklist(_req, res, next) {
 }
 
 module.exports = {
+  getLatestPayrollSummary,
   getPayrollSummary,
   runSection80CSimulation,
   getProofChecklist

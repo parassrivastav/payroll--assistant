@@ -33,8 +33,10 @@ Backend runs on `http://localhost:4000` by default.
 - `POST /upload-doc/salary-slip`
   - multipart fields: `salarySlip` or `file`
   - returns structured `analysis`, flat `finance`, extraction metadata, storage id
+- `GET /payroll/summary`
+  - returns the latest extracted structured payroll summary, or mock payroll JSON when no extraction exists
 - `GET /payroll/:id/summary`
-  - returns saved payroll JSON, calculated values, salary breakdown, YTD values
+  - returns saved payroll JSON, calculated values, salary breakdown, YTD values, and validation warnings
 - `POST /payroll/narrate`
   - body: `{ "finance": { "payroll": {}, "calculated": {} }, "question": "...", "history": [] }`
 - `POST /payroll/:id/narrate`

@@ -1,11 +1,16 @@
 const crypto = require("crypto");
 const { extractDocumentTextWithDetails } = require("../../services/salarySlipAnalyzer/documentTextExtractor");
 const { maskPii } = require("../../services/salarySlipAnalyzer/piiSanitizer");
-const { analyzePayslipText, buildSalarySlipRequest } = require("../../services/salarySlipAnalyzer/salarySlipAnalyzer");
+const {
+  WRAPPER_EXTRACTION_PROMPT,
+  analyzePayslipText,
+  buildSalarySlipRequest
+} = require("../../services/salarySlipAnalyzer/salarySlipAnalyzer");
 const { saveSalarySlipAnalysis } = require("../../services/salarySlipAnalyzer/salarySlipAnalysisRepository");
 const { buildPayrollFinancePayload } = require("../../services/financeLogic/payrollCalculator");
 const { resolveRequestEmployee } = require("../../middleware/authMiddleware");
 const { logAudit } = require("../../services/audit/auditLogger");
+const { isOpenAiProvider } = require("../../services/llm/llmProvider");
 
 async function analyzeSalarySlip(req, res, next) {
   try {
@@ -14,13 +19,21 @@ async function analyzeSalarySlip(req, res, next) {
       req.files?.salarySlip?.[0] ||
       req.files?.file?.[0] ||
       null;
+    const directWrapperAttachment = shouldUseDirectWrapperAttachment(file);
 
-    const extraction = await extractDocumentTextWithDetails({
-      file,
-      text: req.body?.text
-    });
+    const extraction = directWrapperAttachment
+      ? {
+          text: "",
+          method: file.mimetype === "application/pdf" ? "wrapper_pdf_base64" : "wrapper_image_base64"
+        }
+      : await extractDocumentTextWithDetails({
+          file,
+          text: req.body?.text
+        });
 
-    const sanitized = maskPii(extraction.text);
+    const sanitized = directWrapperAttachment
+      ? { text: "", redactions: {} }
+      : maskPii(extraction.text);
     const includeObservability =
       req.query?.debug === "true" ||
       req.body?.includeObservability === true ||
@@ -43,12 +56,14 @@ async function analyzeSalarySlip(req, res, next) {
         },
         observability: {
           sanitizedText: sanitized.text,
-          llmRequest: buildSalarySlipRequest(sanitized.text)
+          llmRequest: isOpenAiProvider()
+            ? buildSalarySlipRequest(sanitized.text)
+            : buildWrapperDryRunRequest(file, sanitized.text)
         }
       });
     }
 
-    const result = await analyzePayslipText(sanitized.text);
+    const result = await analyzePayslipText(sanitized.text, buildWrapperAttachment(file, directWrapperAttachment));
     const finance = buildPayrollFinancePayload(result.analysis);
     const persisted = saveSalarySlipAnalysis({
       employeeId,
@@ -119,6 +134,51 @@ async function analyzeSalarySlip(req, res, next) {
 
 function hashValue(value) {
   return crypto.createHash("sha256").update(value).digest("hex");
+}
+
+function shouldUseDirectWrapperAttachment(file) {
+  return !isOpenAiProvider() && file && (
+    file.mimetype === "application/pdf" ||
+    allowedWrapperImageTypes().has(file.mimetype)
+  );
+}
+
+function buildWrapperAttachment(file, enabled) {
+  if (!enabled) return {};
+
+  if (file.mimetype === "application/pdf") {
+    return { pdfBase64: file.buffer.toString("base64") };
+  }
+
+  return {
+    imageBase64: file.buffer.toString("base64"),
+    imageMediaType: file.mimetype
+  };
+}
+
+function buildWrapperDryRunRequest(file, sanitizedText = "") {
+  const hasBinaryAttachment = file && (
+    file.mimetype === "application/pdf" ||
+    allowedWrapperImageTypes().has(file.mimetype)
+  );
+
+  return {
+    provider: "company-llm-wrapper",
+    prompt: hasBinaryAttachment
+      ? WRAPPER_EXTRACTION_PROMPT
+      : `${WRAPPER_EXTRACTION_PROMPT}\n\nPayslip text:\n${sanitizedText}`,
+    metadata: {
+      client: "payroll-ai-agent",
+      flow: "payslip-extraction"
+    },
+    hasPdfBase64: file?.mimetype === "application/pdf",
+    hasImageBase64: Boolean(file && allowedWrapperImageTypes().has(file.mimetype)),
+    imageMediaType: allowedWrapperImageTypes().has(file?.mimetype) ? file.mimetype : null
+  };
+}
+
+function allowedWrapperImageTypes() {
+  return new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 }
 
 module.exports = { analyzeSalarySlip };

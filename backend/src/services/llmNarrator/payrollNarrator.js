@@ -2,28 +2,33 @@ const { env } = require("../../config/env");
 const { buildPayrollNarratorPrompt } = require("../../prompts/llmNarrator/payrollNarratorPrompt");
 const { payrollNarratorSchema } = require("../../schemas/llmNarrator/payrollNarratorSchema");
 const { buildSourceReference } = require("../financeLogic/payrollCalculator");
-const { getOpenAiClient } = require("../salarySlipAnalyzer/openaiClient");
+const { isOpenAiProvider, queryLLM } = require("../llm/llmProvider");
 
 async function narratePayroll({ finance, question, history, analysis }) {
   validateNarrationInput({ finance, question });
 
-  const client = getOpenAiClient();
   const request = buildPayrollNarratorRequest({ finance, question, history, analysis });
-  const completion = await client.chat.completions.create(request);
-  const content = completion.choices?.[0]?.message?.content;
+  const llmResult = isOpenAiProvider()
+    ? await queryLLM({ openAiRequest: request })
+    : await queryLLM({
+        prompt: buildNarratorWrapperPrompt(request.messages),
+        metadata: {
+          flow: "payroll-narration"
+        }
+      });
 
-  if (!content) {
-    const err = new Error("OpenAI returned an empty payroll narration.");
+  if (!llmResult.content) {
+    const err = new Error("LLM provider returned an empty payroll narration.");
     err.statusCode = 502;
     err.code = "EMPTY_NARRATOR_RESPONSE";
     throw err;
   }
 
   return {
-    narration: JSON.parse(content),
-    usage: completion.usage || null,
-    model: completion.model || request.model,
-    request
+    narration: isOpenAiProvider() ? JSON.parse(llmResult.content) : normalizeNarratorWrapperContent(llmResult.content),
+    usage: llmResult.usage || null,
+    model: llmResult.model || request.model,
+    request: llmResult.request
   };
 }
 
@@ -42,6 +47,25 @@ function buildPayrollNarratorRequest({ finance, question, history = [], analysis
       }
     }
   };
+}
+
+function buildNarratorWrapperPrompt(messages) {
+  return messages
+    .map((message) => `${message.role.toUpperCase()}:\n${message.content}`)
+    .join("\n\n");
+}
+
+function normalizeNarratorWrapperContent(content) {
+  try {
+    const parsed = JSON.parse(content);
+    if (typeof parsed.answer === "string") {
+      return { answer: parsed.answer };
+    }
+  } catch (_err) {
+    // Wrapper narration can be plain text.
+  }
+
+  return { answer: String(content || "").trim() };
 }
 
 function withSourceReference(finance, analysis) {
@@ -81,5 +105,6 @@ function validateNarrationInput({ finance, question }) {
 module.exports = {
   narratePayroll,
   buildPayrollNarratorRequest,
+  buildNarratorWrapperPrompt,
   withSourceReference
 };

@@ -52,6 +52,8 @@ const { saveSalarySlipAnalysis } = require("../src/services/salarySlipAnalyzer/s
 const { buildPayrollFinancePayload } = require("../src/services/financeLogic/payrollCalculator");
 const { buildPayrollSummaryFromRecord } = require("../src/services/financeLogic/payrollSummaryBuilder");
 const { getAuditEntries, clearAuditEntries } = require("../src/services/audit/auditLogger");
+const { queryCompanyWrapper } = require("../src/services/llm/companyLlmWrapperClient");
+const { env } = require("../src/config/env");
 
 const emp1Token = "Bearer mock-token-emp_001";
 const emp2Token = "Bearer mock-token-emp_002";
@@ -256,5 +258,21 @@ describe("audit logging", () => {
       .set("Authorization", emp2Token);
     expect(response.status).toBe(200);
     expect(getAuditEntries().some((entry) => entry.action === "proof_checklist_view")).toBe(true);
+  });
+});
+
+describe("llm provider switch", () => {
+  test("company wrapper reports missing token clearly", async () => {
+    const previousToken = env.llmWrapperApiToken;
+    env.llmWrapperApiToken = "";
+
+    await expect(queryCompanyWrapper({
+      prompt: "Hello",
+      metadata: { flow: "payroll-narration" }
+    })).rejects.toMatchObject({
+      code: "LLM_WRAPPER_TOKEN_MISSING"
+    });
+
+    env.llmWrapperApiToken = previousToken;
   });
 });

@@ -54,6 +54,81 @@ The narrator prompt includes:
 
 The narrator is instructed to cite available source fields and never invent sources.
 
+## LLM Provider Switch
+
+The backend supports two LLM providers through one provider abstraction:
+
+- OpenAI flow, enabled by default.
+- Company LLM wrapper, enabled when `USE_OPENAI=false`.
+
+Default behavior is:
+
+```env
+USE_OPENAI=true
+```
+
+OpenAI setup:
+
+```env
+USE_OPENAI=true
+OPENAI_API_KEY=your_openai_key
+OPENAI_MODEL=gpt-5.5
+```
+
+Company wrapper setup:
+
+```env
+USE_OPENAI=false
+LLM_WRAPPER_BASE_URL=https://llm-wrapper-741152993481.asia-south1.run.app
+LLM_WRAPPER_API_TOKEN=your_wrapper_token
+```
+
+When `USE_OPENAI=false`, the app sends narration as text prompts to the wrapper. For payslip extraction, PDF and image uploads are sent as raw base64 attachments without a `data:...;base64,` prefix.
+
+Wrapper text payload:
+
+```json
+{
+  "prompt": "Hello",
+  "metadata": {
+    "client": "payroll-ai-agent",
+    "traceId": "uuid",
+    "flow": "payroll-narration"
+  }
+}
+```
+
+Wrapper PDF payload:
+
+```json
+{
+  "prompt": "Summarize this document.",
+  "pdfBase64": "RAW_BASE64_PDF_WITHOUT_DATA_PREFIX",
+  "metadata": {
+    "client": "payroll-ai-agent",
+    "traceId": "uuid",
+    "flow": "payslip-extraction"
+  }
+}
+```
+
+Wrapper image payload:
+
+```json
+{
+  "prompt": "What is in this image?",
+  "imageBase64": "RAW_BASE64_IMAGE_WITHOUT_DATA_PREFIX",
+  "imageMediaType": "image/png",
+  "metadata": {
+    "client": "payroll-ai-agent",
+    "traceId": "uuid",
+    "flow": "payslip-extraction"
+  }
+}
+```
+
+Allowed wrapper image media types are `image/jpeg`, `image/png`, `image/gif`, and `image/webp`. If `USE_OPENAI=false` and `LLM_WRAPPER_API_TOKEN` is missing, the backend returns a clear configuration error and does not silently fall back to OpenAI.
+
 ## Deterministic Backend Calculations
 
 Gross/net checks, total earnings, total deductions, calculated net pay, month comparison, 80C simulation, and proof checklist summaries are all computed in backend code. This keeps business logic repeatable and easy to test.
@@ -104,7 +179,7 @@ Backend:
 cd backend
 npm install
 cp .env.example .env
-# set OPENAI_API_KEY in .env
+# set OPENAI_API_KEY or LLM_WRAPPER_API_TOKEN in .env depending on USE_OPENAI
 npm start
 ```
 

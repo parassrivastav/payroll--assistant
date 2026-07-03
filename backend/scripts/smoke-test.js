@@ -2,6 +2,7 @@ const { maskPii } = require("../src/services/salarySlipAnalyzer/piiSanitizer");
 const { buildSalarySlipPrompt } = require("../src/prompts/salarySlipAnalyzer/salarySlipPrompt");
 const { buildPayrollFinancePayload } = require("../src/services/financeLogic/payrollCalculator");
 const { buildPayrollNarratorRequest } = require("../src/services/llmNarrator/payrollNarrator");
+const { normalizeWrapperPayslipJson } = require("../src/services/salarySlipAnalyzer/salarySlipAnalyzer");
 const { simulateSection80C } = require("../src/services/financeLogic/section80CSimulator");
 const { getInvestmentProofChecklist } = require("../src/services/financeLogic/investmentProofChecklist");
 const { buildMonthComparison } = require("../src/services/financeLogic/monthComparisonService");
@@ -24,6 +25,12 @@ Net Pay 107000
 
 const sanitized = maskPii(sample);
 const prompt = buildSalarySlipPrompt(sanitized.text);
+const wrapperAnalysis = normalizeWrapperPayslipJson({
+  month: "June 2026",
+  basic_salary: 50000,
+  hra: 20000,
+  year_to_date: { gross_pay: 540000, tds: 21000, pf: 36000 }
+});
 
 if (sanitized.text.includes("Priya") || sanitized.text.includes("ABCDE1234F")) {
   throw new Error("PII sanitizer smoke test failed.");
@@ -31,6 +38,14 @@ if (sanitized.text.includes("Priya") || sanitized.text.includes("ABCDE1234F")) {
 
 if (!prompt[0].content || !prompt[1].content.includes("Sanitized salary slip text")) {
   throw new Error("Prompt builder smoke test failed.");
+}
+
+if (
+  wrapperAnalysis.pay_period !== "June 2026" ||
+  wrapperAnalysis.basic.amount !== 50000 ||
+  wrapperAnalysis.year_to_date.income_tax_tds.amount !== 21000
+) {
+  throw new Error("Wrapper payslip normalization smoke test failed.");
 }
 
 const finance = buildPayrollFinancePayload({

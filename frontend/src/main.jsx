@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import "./styles.css";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 function App() {
   const [messages, setMessages] = useState([
@@ -729,7 +729,7 @@ function MiniAnalysis({ data }) {
     <div className="mini-analysis">
       <span>Net {formatMoney(data.finance?.payroll?.net, data.finance?.payroll?.currency)}</span>
       <span>Gross {formatMoney(data.finance?.payroll?.gross, data.finance?.payroll?.currency)}</span>
-      <span>{data.finance?.payroll?.month || "Pay period missing"}</span>
+      <span>{data.finance?.payroll?.month || ""}</span>
     </div>
   );
 }
@@ -743,7 +743,7 @@ async function parseJsonResponse(response) {
 }
 
 function formatMoney(value, currency = "INR") {
-  if (typeof value !== "number") return "Missing";
+  if (typeof value !== "number") return "";
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: currency || "INR",
@@ -752,7 +752,7 @@ function formatMoney(value, currency = "INR") {
 }
 
 function formatSignedMoney(value, currency = "INR") {
-  if (typeof value !== "number") return "Missing";
+  if (typeof value !== "number") return "";
   if (value === 0) return formatMoney(0, currency);
   const sign = value > 0 ? "+" : "-";
   return `${sign}${formatMoney(Math.abs(value), currency)}`;

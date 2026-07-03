@@ -1,5 +1,6 @@
 const {
   getLatestSalarySlipAnalysis,
+  getLatestSalarySlipAnalyses,
   getSalarySlipAnalysisById
 } = require("../../services/salarySlipAnalyzer/salarySlipAnalysisRepository");
 const {
@@ -8,6 +9,7 @@ const {
 } = require("../../services/financeLogic/payrollSummaryBuilder");
 const { simulateSection80C } = require("../../services/financeLogic/section80CSimulator");
 const { getInvestmentProofChecklist } = require("../../services/financeLogic/investmentProofChecklist");
+const { buildMonthComparison } = require("../../services/financeLogic/monthComparisonService");
 
 function getPayrollSummary(req, res, next) {
   try {
@@ -55,9 +57,18 @@ function getProofChecklist(_req, res, next) {
   }
 }
 
+function getMonthComparison(_req, res, next) {
+  try {
+    res.json(buildMonthComparison(getLatestSalarySlipAnalyses(2)));
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getLatestPayrollSummary,
   getPayrollSummary,
   runSection80CSimulation,
-  getProofChecklist
+  getProofChecklist,
+  getMonthComparison
 };

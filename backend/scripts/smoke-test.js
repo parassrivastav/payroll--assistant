@@ -4,6 +4,7 @@ const { buildPayrollFinancePayload } = require("../src/services/financeLogic/pay
 const { buildPayrollNarratorRequest } = require("../src/services/llmNarrator/payrollNarrator");
 const { simulateSection80C } = require("../src/services/financeLogic/section80CSimulator");
 const { getInvestmentProofChecklist } = require("../src/services/financeLogic/investmentProofChecklist");
+const { buildMonthComparison } = require("../src/services/financeLogic/monthComparisonService");
 
 const sample = `
 Employee Name: Priya Sharma
@@ -77,6 +78,17 @@ const proofChecklist = getInvestmentProofChecklist();
 
 if (proofChecklist.summary.missing_count !== 2 || !proofChecklist.summary.missing_items.includes("ELSS")) {
   throw new Error("Proof checklist smoke test failed.");
+}
+
+const monthComparison = buildMonthComparison([]);
+
+if (
+  monthComparison.source !== "mock" ||
+  monthComparison.differences.gross_pay.difference.amount !== -3000 ||
+  monthComparison.differences.income_tax_tds.difference.amount !== 1000 ||
+  monthComparison.differences.reimbursements.difference.amount !== -3000
+) {
+  throw new Error("Month comparison smoke test failed.");
 }
 
 console.log("Smoke test passed.");

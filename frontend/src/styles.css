@@ -283,6 +283,41 @@ tr:last-child td {
   margin-top: 6px;
 }
 
+.comparison-table th,
+.comparison-table td {
+  width: auto;
+  white-space: nowrap;
+}
+
+.comparison-table thead th {
+  color: #52615a;
+  font-size: 12px;
+  background: #eef6f2;
+}
+
+.comparison-table tbody th {
+  width: 34%;
+}
+
+.comparison-table .positive {
+  color: #1f6b4f;
+}
+
+.comparison-table .negative {
+  color: #a13b32;
+}
+
+.comparison-explanation {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: #5b6962;
+  font-size: 13px;
+}
+
+.comparison-explanation li + li {
+  margin-top: 5px;
+}
+
 .tax-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr)) auto;

@@ -37,6 +37,8 @@ Backend runs on `http://localhost:4000` by default.
   - returns the latest extracted structured payroll summary, or mock payroll JSON when no extraction exists
 - `GET /payroll/:id/summary`
   - returns saved payroll JSON, calculated values, salary breakdown, YTD values, and validation warnings
+- `GET /payroll/month-comparison`
+  - compares latest two uploaded payrolls, or deterministic May/June mock payrolls when history is unavailable
 - `POST /payroll/narrate`
   - body: `{ "finance": { "payroll": {}, "calculated": {} }, "question": "...", "history": [] }`
 - `POST /payroll/:id/narrate`

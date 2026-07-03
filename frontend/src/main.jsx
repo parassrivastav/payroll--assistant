@@ -33,6 +33,7 @@ function App() {
   const [file, setFile] = useState(null);
   const [analysisState, setAnalysisState] = useState(null);
   const [summary, setSummary] = useState(null);
+  const [monthComparison, setMonthComparison] = useState(null);
   const [proofChecklist, setProofChecklist] = useState(null);
   const [taxInputs, setTaxInputs] = useState({ alreadyDeclared80C: 80000, additionalInvestment: 50000 });
   const [taxResult, setTaxResult] = useState(null);
@@ -42,6 +43,7 @@ function App() {
 
   useEffect(() => {
     loadLatestPayrollSummary();
+    loadMonthComparison();
     loadProofChecklist();
   }, []);
 
@@ -100,6 +102,7 @@ function App() {
       };
       setAnalysisState(nextState);
       setSummary(await fetchPayrollSummary(payload.id, payload));
+      await loadMonthComparison();
 
       setMessages((current) => [
         ...current,
@@ -176,6 +179,15 @@ function App() {
         items: [],
         summary: { missing_proof_summary: error.message, missing_count: 0, submitted_count: 0 }
       });
+    }
+  }
+
+  async function loadMonthComparison() {
+    try {
+      const response = await fetch(`${API_BASE_URL}/payroll/month-comparison`);
+      setMonthComparison(await parseJsonResponse(response));
+    } catch (_error) {
+      setMonthComparison(null);
     }
   }
 
@@ -321,6 +333,7 @@ function App() {
           <div className="left-stack">
             <SalaryCards finance={finance} />
             <SalaryBreakdown summary={summary} finance={finance} />
+            <MonthComparison comparison={monthComparison} />
             <TaxSimulator
               taxInputs={taxInputs}
               setTaxInputs={setTaxInputs}
@@ -520,6 +533,52 @@ function BreakdownTable({ title, rows, currency }) {
   );
 }
 
+function MonthComparison({ comparison }) {
+  const rows = comparison?.fields?.filter((field) => (
+    ["gross_pay", "net_pay", "income_tax_tds", "pf", "reimbursements"].includes(field.key)
+  )) || [];
+
+  return (
+    <section className="panel">
+      <PanelTitle
+        title="Month Comparison"
+        subtitle={comparison
+          ? `${comparison.previous_month} to ${comparison.current_month}`
+          : "Comparing current and previous month"}
+      />
+      <table className="comparison-table">
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Previous</th>
+            <th>Current</th>
+            <th>Difference</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((field) => (
+            <tr key={field.key}>
+              <th>{field.label === "Income tax/TDS" ? "TDS" : field.label}</th>
+              <td>{formatMoney(field.previous?.amount, field.previous?.currency)}</td>
+              <td>{formatMoney(field.current?.amount, field.current?.currency)}</td>
+              <td className={field.difference.amount < 0 ? "negative" : field.difference.amount > 0 ? "positive" : ""}>
+                {formatSignedMoney(field.difference?.amount, field.difference?.currency)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {comparison?.explanation?.length > 0 && (
+        <ul className="comparison-explanation">
+          {comparison.explanation.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
 function TaxSimulator({ taxInputs, setTaxInputs, taxResult, runTaxSimulation }) {
   return (
     <section className="panel">
@@ -640,6 +699,13 @@ function formatMoney(value, currency = "INR") {
     currency: currency || "INR",
     maximumFractionDigits: 0
   }).format(value);
+}
+
+function formatSignedMoney(value, currency = "INR") {
+  if (typeof value !== "number") return "Missing";
+  if (value === 0) return formatMoney(0, currency);
+  const sign = value > 0 ? "+" : "-";
+  return `${sign}${formatMoney(Math.abs(value), currency)}`;
 }
 
 createRoot(document.getElementById("root")).render(<App />);

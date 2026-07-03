@@ -1,13 +1,14 @@
 const { env } = require("../../config/env");
 const { buildPayrollNarratorPrompt } = require("../../prompts/llmNarrator/payrollNarratorPrompt");
 const { payrollNarratorSchema } = require("../../schemas/llmNarrator/payrollNarratorSchema");
+const { buildSourceReference } = require("../financeLogic/payrollCalculator");
 const { getOpenAiClient } = require("../salarySlipAnalyzer/openaiClient");
 
-async function narratePayroll({ finance, question, history }) {
+async function narratePayroll({ finance, question, history, analysis }) {
   validateNarrationInput({ finance, question });
 
   const client = getOpenAiClient();
-  const request = buildPayrollNarratorRequest({ finance, question, history });
+  const request = buildPayrollNarratorRequest({ finance, question, history, analysis });
   const completion = await client.chat.completions.create(request);
   const content = completion.choices?.[0]?.message?.content;
 
@@ -26,10 +27,12 @@ async function narratePayroll({ finance, question, history }) {
   };
 }
 
-function buildPayrollNarratorRequest({ finance, question, history = [] }) {
+function buildPayrollNarratorRequest({ finance, question, history = [], analysis }) {
+  const groundedFinance = withSourceReference(finance, analysis);
+
   return {
     model: env.openAiModel,
-    messages: buildPayrollNarratorPrompt({ finance, question, history }),
+    messages: buildPayrollNarratorPrompt({ finance: groundedFinance, question, history }),
     response_format: {
       type: "json_schema",
       json_schema: {
@@ -38,6 +41,17 @@ function buildPayrollNarratorRequest({ finance, question, history = [] }) {
         schema: payrollNarratorSchema
       }
     }
+  };
+}
+
+function withSourceReference(finance, analysis) {
+  if (finance?.source_reference) {
+    return finance;
+  }
+
+  return {
+    ...finance,
+    source_reference: buildSourceReference(finance?.payroll || {}, finance?.calculated || {}, analysis || {})
   };
 }
 
@@ -66,5 +80,6 @@ function validateNarrationInput({ finance, question }) {
 
 module.exports = {
   narratePayroll,
-  buildPayrollNarratorRequest
+  buildPayrollNarratorRequest,
+  withSourceReference
 };

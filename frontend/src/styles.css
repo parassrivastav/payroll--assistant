@@ -57,7 +57,8 @@ input {
 .mini-analysis,
 .attachment-chip,
 .proof-item,
-.secondary-button {
+.secondary-button,
+.login-strip {
   display: flex;
   align-items: center;
 }
@@ -143,6 +144,32 @@ h3 {
   border-radius: 999px;
   padding: 7px 10px;
   font-size: 13px;
+  white-space: nowrap;
+}
+
+.login-strip {
+  gap: 8px;
+  margin-left: auto;
+}
+
+.login-strip select {
+  height: 34px;
+  border: 1px solid #d6dfda;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #26352e;
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.login-strip .secondary-button {
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.login-strip span {
+  color: #66736c;
+  font-size: 12px;
   white-space: nowrap;
 }
 

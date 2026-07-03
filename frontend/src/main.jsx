@@ -31,6 +31,8 @@ function App() {
   ]);
   const [input, setInput] = useState("");
   const [file, setFile] = useState(null);
+  const [selectedUserId, setSelectedUserId] = useState("emp_001");
+  const [auth, setAuth] = useState(null);
   const [analysisState, setAnalysisState] = useState(null);
   const [summary, setSummary] = useState(null);
   const [monthComparison, setMonthComparison] = useState(null);
@@ -42,10 +44,15 @@ function App() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
+    loginAs("emp_001");
+  }, []);
+
+  useEffect(() => {
+    if (!auth?.token) return;
     loadLatestPayrollSummary();
     loadMonthComparison();
     loadProofChecklist();
-  }, []);
+  }, [auth?.token]);
 
   const canSend = useMemo(() => {
     return !isBusy && (Boolean(file) || input.trim().length > 0);
@@ -69,6 +76,25 @@ function App() {
     await askFollowUp(question);
   }
 
+  async function loginAs(userId = selectedUserId) {
+    setStatus("Logging in");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId })
+      });
+      const payload = await parseJsonResponse(response);
+      setSelectedUserId(userId);
+      setAuth(payload);
+      setStatus("Ready");
+    } catch (error) {
+      appendError(error);
+      setStatus("Login required");
+    }
+  }
+
   async function analyzeSlipAndMaybeAsk(selectedFile, question) {
     setMessages((current) => [
       ...current,
@@ -89,6 +115,7 @@ function App() {
 
       const response = await fetch(`${API_BASE_URL}/upload-doc/salary-slip`, {
         method: "POST",
+        headers: authHeaders(auth),
         body: formData
       });
 
@@ -132,7 +159,9 @@ function App() {
 
   async function fetchPayrollSummary(id, fallbackPayload) {
     try {
-      const response = await fetch(`${API_BASE_URL}/payroll/${id}/summary`);
+      const response = await fetch(`${API_BASE_URL}/payroll/${id}/summary`, {
+        headers: authHeaders(auth)
+      });
       return await parseJsonResponse(response);
     } catch (_error) {
       return fallbackPayload
@@ -140,6 +169,7 @@ function App() {
             id: fallbackPayload.id,
             payroll_json: fallbackPayload.finance?.payroll,
             calculated_values: fallbackPayload.finance?.calculated,
+            source_reference_json: fallbackPayload.finance?.source_reference,
             salary_breakdown: fallbackPayload.analysis,
             year_to_date: fallbackPayload.analysis?.year_to_date,
             extraction: fallbackPayload.extraction
@@ -150,7 +180,9 @@ function App() {
 
   async function loadLatestPayrollSummary() {
     try {
-      const response = await fetch(`${API_BASE_URL}/payroll/summary`);
+      const response = await fetch(`${API_BASE_URL}/payroll/summary`, {
+        headers: authHeaders(auth)
+      });
       const payload = await parseJsonResponse(response);
       setSummary(payload);
 
@@ -159,7 +191,8 @@ function App() {
           id: payload.id,
           finance: {
             payroll: payload.payroll_json,
-            calculated: payload.calculated_values
+            calculated: payload.calculated_values,
+            source_reference: payload.source_reference_json
           },
           analysis: payload.salary_breakdown,
           extraction: payload.extraction
@@ -172,7 +205,9 @@ function App() {
 
   async function loadProofChecklist() {
     try {
-      const response = await fetch(`${API_BASE_URL}/investment-proofs/checklist`);
+      const response = await fetch(`${API_BASE_URL}/investment-proofs/checklist`, {
+        headers: authHeaders(auth)
+      });
       setProofChecklist(await parseJsonResponse(response));
     } catch (error) {
       setProofChecklist({
@@ -184,7 +219,9 @@ function App() {
 
   async function loadMonthComparison() {
     try {
-      const response = await fetch(`${API_BASE_URL}/payroll/month-comparison`);
+      const response = await fetch(`${API_BASE_URL}/payroll/month-comparison`, {
+        headers: authHeaders(auth)
+      });
       setMonthComparison(await parseJsonResponse(response));
     } catch (_error) {
       setMonthComparison(null);
@@ -198,7 +235,7 @@ function App() {
     try {
       const response = await fetch(`${API_BASE_URL}/tax/80c/simulate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders(auth) },
         body: JSON.stringify({
           alreadyDeclared80C: taxInputs.alreadyDeclared80C,
           additionalInvestment: taxInputs.additionalInvestment
@@ -261,7 +298,7 @@ function App() {
 
       const response = await fetch(endpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders(auth) },
         body: JSON.stringify(body)
       });
 
@@ -307,7 +344,8 @@ function App() {
 
   const finance = {
     payroll: summary?.payroll_json || analysisState?.finance?.payroll,
-    calculated: summary?.calculated_values || analysisState?.finance?.calculated
+    calculated: summary?.calculated_values || analysisState?.finance?.calculated,
+    source_reference: summary?.source_reference_json || analysisState?.finance?.source_reference
   };
 
   return (
@@ -323,6 +361,18 @@ function App() {
               <p>{status}</p>
             </div>
           </div>
+          <form className="login-strip" onSubmit={(event) => {
+            event.preventDefault();
+            loginAs(selectedUserId);
+          }}>
+            <select value={selectedUserId} onChange={(event) => setSelectedUserId(event.target.value)}>
+              <option value="emp_001">emp_001</option>
+              <option value="emp_002">emp_002</option>
+              <option value="admin_001">admin_001</option>
+            </select>
+            <button type="submit" className="secondary-button">Login</button>
+            <span>{auth?.user ? `${auth.user.role}` : "Not signed in"}</span>
+          </form>
           <div className="status-pill">
             {isBusy ? <Loader2 className="spin" size={15} /> : <Bot size={15} />}
             <span>{isBusy ? "Working" : "Online"}</span>
@@ -706,6 +756,10 @@ function formatSignedMoney(value, currency = "INR") {
   if (value === 0) return formatMoney(0, currency);
   const sign = value > 0 ? "+" : "-";
   return `${sign}${formatMoney(Math.abs(value), currency)}`;
+}
+
+function authHeaders(auth) {
+  return auth?.token ? { Authorization: `Bearer ${auth.token}` } : {};
 }
 
 createRoot(document.getElementById("root")).render(<App />);

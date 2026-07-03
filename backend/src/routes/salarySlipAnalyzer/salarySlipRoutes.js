@@ -2,6 +2,7 @@ const express = require("express");
 const multer = require("multer");
 const { analyzeSalarySlip } = require("../../controllers/salarySlipAnalyzer/salarySlipController");
 const { env } = require("../../config/env");
+const { requireAuth } = require("../../middleware/authMiddleware");
 
 const router = express.Router();
 const upload = multer({
@@ -11,6 +12,7 @@ const upload = multer({
 
 router.post(
   "/upload-doc/salary-slip",
+  requireAuth,
   upload.fields([
     { name: "salarySlip", maxCount: 1 },
     { name: "file", maxCount: 1 }

@@ -52,6 +52,13 @@ if (finance.calculated.total_deductions !== 9500 || finance.calculated.calculate
   throw new Error("Finance logic smoke test failed.");
 }
 
+if (
+  finance.source_reference.hra.source !== "Payslip → Earnings → HRA" ||
+  finance.source_reference.professional_tax.source !== null
+) {
+  throw new Error("Payroll source reference smoke test failed.");
+}
+
 const narratorRequest = buildPayrollNarratorRequest({
   finance,
   question: "Why is my net salary lower?"
@@ -60,7 +67,9 @@ const narratorRequest = buildPayrollNarratorRequest({
 if (
   narratorRequest.messages.length !== 2 ||
   narratorRequest.response_format.type !== "json_schema" ||
-  !narratorRequest.messages[1].content.includes("USER QUESTION")
+  !narratorRequest.messages[0].content.includes("Never invent a source") ||
+  !narratorRequest.messages[1].content.includes("SOURCE REFERENCE JSON") ||
+  !narratorRequest.messages[1].content.includes("Payslip → Earnings → HRA")
 ) {
   throw new Error("Payroll narrator smoke test failed.");
 }

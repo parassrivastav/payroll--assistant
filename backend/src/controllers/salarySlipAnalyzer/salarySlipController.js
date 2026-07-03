@@ -4,9 +4,12 @@ const { maskPii } = require("../../services/salarySlipAnalyzer/piiSanitizer");
 const { analyzePayslipText, buildSalarySlipRequest } = require("../../services/salarySlipAnalyzer/salarySlipAnalyzer");
 const { saveSalarySlipAnalysis } = require("../../services/salarySlipAnalyzer/salarySlipAnalysisRepository");
 const { buildPayrollFinancePayload } = require("../../services/financeLogic/payrollCalculator");
+const { resolveRequestEmployee } = require("../../middleware/authMiddleware");
+const { logAudit } = require("../../services/audit/auditLogger");
 
 async function analyzeSalarySlip(req, res, next) {
   try {
+    const employeeId = resolveRequestEmployee(req);
     const file =
       req.files?.salarySlip?.[0] ||
       req.files?.file?.[0] ||
@@ -48,6 +51,7 @@ async function analyzeSalarySlip(req, res, next) {
     const result = await analyzePayslipText(sanitized.text);
     const finance = buildPayrollFinancePayload(result.analysis);
     const persisted = saveSalarySlipAnalysis({
+      employeeId,
       analysis: result.analysis,
       finance,
       sourceFilenameHash: file?.originalname ? hashValue(file.originalname) : null,
@@ -65,8 +69,21 @@ async function analyzeSalarySlip(req, res, next) {
       }
     });
 
+    logAudit({
+      user: req.user,
+      employeeId,
+      action: "payslip_upload",
+      metadata: {
+        analysisId: persisted.id,
+        extractionMethod: extraction.method,
+        hasFile: Boolean(file),
+        fileType: file?.mimetype || null
+      }
+    });
+
     const response = {
       id: persisted.id,
+      employeeId,
       analysis: result.analysis,
       finance,
       piiMasking: {

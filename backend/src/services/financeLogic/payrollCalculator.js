@@ -41,8 +41,70 @@ function buildPayrollFinancePayload(analysis) {
 
   return {
     payroll,
-    calculated
+    calculated,
+    source_reference: buildSourceReference(payroll, calculated, analysis)
   };
+}
+
+function buildSourceReference(payroll, calculated, analysis = {}) {
+  return {
+    month: sourceValue(payroll.month, "Payslip → Header → Pay Period", Boolean(analysis.pay_period)),
+    basic_salary: sourceValue(payroll.basic, "Payslip → Earnings → Basic Salary", hasAmount(analysis.basic)),
+    hra: sourceValue(payroll.hra, "Payslip → Earnings → HRA", hasAmount(analysis.hra)),
+    lta: sourceValue(payroll.lta, "Payslip → Earnings → LTA", hasAmount(analysis.lta)),
+    special_allowance: sourceValue(
+      payroll.special_allowance,
+      "Payslip → Earnings → Special Allowance",
+      hasAmount(analysis.special_allowance)
+    ),
+    reimbursements: sourceValue(
+      payroll.reimbursements,
+      "Payslip → Earnings → Reimbursements",
+      hasAmount(analysis.reimbursements)
+    ),
+    provident_fund: sourceValue(
+      payroll.pf,
+      "Payslip → Deductions → Provident Fund",
+      hasAmount(analysis.provident_fund)
+    ),
+    professional_tax: sourceValue(
+      payroll.professional_tax,
+      "Payslip → Deductions → Professional Tax",
+      hasAmount(analysis.professional_tax)
+    ),
+    income_tax_tds: sourceValue(
+      payroll.tds,
+      "Payslip → Deductions → Income Tax/TDS",
+      hasAmount(analysis.income_tax_tds)
+    ),
+    gross_pay: sourceValue(payroll.gross, "Payslip → Summary → Gross Pay", hasAmount(analysis.gross_pay)),
+    net_pay: sourceValue(payroll.net, "Payslip → Summary → Net Pay", hasAmount(analysis.net_pay)),
+    total_deductions: sourceValue(
+      calculated.total_deductions,
+      "Calculated → Provident Fund + Professional Tax + Income Tax/TDS",
+      hasAnyAmount([analysis.provident_fund, analysis.professional_tax, analysis.income_tax_tds])
+    ),
+    calculated_net_pay: sourceValue(
+      calculated.calculated_net,
+      "Calculated → Gross Pay - Total Deductions + Reimbursements",
+      hasAmount(analysis.gross_pay)
+    )
+  };
+}
+
+function sourceValue(value, source, isAvailable = true) {
+  return {
+    value,
+    source: isAvailable && value !== null && value !== undefined ? source : null
+  };
+}
+
+function hasAmount(value) {
+  return typeof value?.amount === "number";
+}
+
+function hasAnyAmount(values) {
+  return values.some(hasAmount);
 }
 
 function amountOf(value) {
@@ -87,4 +149,4 @@ function pickCurrency(analysis) {
   );
 }
 
-module.exports = { buildPayrollFinancePayload };
+module.exports = { buildPayrollFinancePayload, buildSourceReference };

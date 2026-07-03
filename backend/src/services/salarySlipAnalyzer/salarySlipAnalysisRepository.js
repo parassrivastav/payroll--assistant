@@ -8,6 +8,7 @@ let db;
 function saveSalarySlipAnalysis(record) {
   const database = getDatabase();
   const payload = {
+    employeeId: record.employeeId || null,
     analysis: record.analysis,
     finance: record.finance,
     extraction: record.extraction,
@@ -50,10 +51,35 @@ function getLatestSalarySlipAnalysis() {
   return row ? mapRow(row) : null;
 }
 
+function getLatestSalarySlipAnalysisForEmployee(employeeId) {
+  const row = getDatabase()
+    .prepare(`
+      SELECT * FROM salary_slip_documents
+      WHERE json_extract(payload_json, '$.employeeId') = ?
+      ORDER BY id DESC
+      LIMIT 1
+    `)
+    .get(employeeId);
+
+  return row ? mapRow(row) : null;
+}
+
 function getLatestSalarySlipAnalyses(limit = 2) {
   return getDatabase()
     .prepare("SELECT * FROM salary_slip_documents ORDER BY id DESC LIMIT ?")
     .all(limit)
+    .map(mapRow);
+}
+
+function getLatestSalarySlipAnalysesForEmployee(employeeId, limit = 2) {
+  return getDatabase()
+    .prepare(`
+      SELECT * FROM salary_slip_documents
+      WHERE json_extract(payload_json, '$.employeeId') = ?
+      ORDER BY id DESC
+      LIMIT ?
+    `)
+    .all(employeeId, limit)
     .map(mapRow);
 }
 
@@ -89,6 +115,7 @@ function mapRow(row) {
   return {
     id: row.id,
     documentType: row.document_type,
+    employeeId: payload.employeeId || null,
     sourceFilenameHash: row.source_filename_hash,
     payload,
     createdAt: row.created_at
@@ -99,5 +126,7 @@ module.exports = {
   saveSalarySlipAnalysis,
   getSalarySlipAnalysisById,
   getLatestSalarySlipAnalysis,
-  getLatestSalarySlipAnalyses
+  getLatestSalarySlipAnalysisForEmployee,
+  getLatestSalarySlipAnalyses,
+  getLatestSalarySlipAnalysesForEmployee
 };

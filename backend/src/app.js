@@ -1,6 +1,7 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
+const authRoutes = require("./routes/auth/authRoutes");
 const salarySlipRoutes = require("./routes/salarySlipAnalyzer/salarySlipRoutes");
 const payrollNarratorRoutes = require("./routes/llmNarrator/payrollNarratorRoutes");
 const financeLogicRoutes = require("./routes/financeLogic/financeLogicRoutes");
@@ -16,6 +17,7 @@ app.get("/health", (_req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use("/", authRoutes);
 app.use("/", salarySlipRoutes);
 app.use("/", payrollNarratorRoutes);
 app.use("/", financeLogicRoutes);

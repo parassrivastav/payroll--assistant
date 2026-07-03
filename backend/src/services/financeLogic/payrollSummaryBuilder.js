@@ -1,3 +1,5 @@
+const { buildSourceReference } = require("./payrollCalculator");
+
 const MOCK_ANALYSIS = {
   doc_type: "payslip",
   pay_period: "June 2026",
@@ -41,8 +43,11 @@ const MOCK_FINANCE = {
     calculated_net: 80500,
     net_difference: 0,
     gross_difference: 0
-  }
+  },
+  source_reference: null
 };
+
+MOCK_FINANCE.source_reference = buildSourceReference(MOCK_FINANCE.payroll, MOCK_FINANCE.calculated, MOCK_ANALYSIS);
 
 function buildPayrollSummaryFromRecord(record) {
   return buildStructuredPayrollSummary({
@@ -85,6 +90,7 @@ function buildStructuredPayrollSummary({
 }) {
   const payroll = finance.payroll || {};
   const calculated = finance.calculated || {};
+  const sourceReference = finance.source_reference || buildSourceReference(payroll, calculated, analysis);
   const currency = payroll.currency || pickCurrency(analysis);
   const totalEarnings = sum([
     payroll.basic,
@@ -119,6 +125,7 @@ function buildStructuredPayrollSummary({
       total_deductions: totalDeductions,
       calculated_net_pay: calculatedNetPay
     },
+    source_reference_json: sourceReference,
     summary: {
       month: payroll.month || analysis.pay_period || null,
       basic_salary: money(payroll.basic, currency),
@@ -135,7 +142,13 @@ function buildStructuredPayrollSummary({
       total_earnings: money(totalEarnings, currency),
       total_deductions: money(totalDeductions, currency),
       calculated_net_pay: money(calculatedNetPay, currency),
-      validation_warnings: buildValidationWarnings({ payroll, totalEarnings, totalDeductions, calculatedNetPay })
+      validation_warnings: buildValidationWarnings({
+        payroll,
+        totalEarnings,
+        totalDeductions,
+        calculatedNetPay,
+        sourceReference
+      })
     },
     salary_breakdown: {
       basic: analysis.basic,
@@ -164,7 +177,7 @@ function normalizeYtd(ytd, currency) {
   };
 }
 
-function buildValidationWarnings({ payroll, totalEarnings, totalDeductions, calculatedNetPay }) {
+function buildValidationWarnings({ payroll, totalEarnings, totalDeductions, calculatedNetPay, sourceReference = {} }) {
   const warnings = [];
 
   if (typeof payroll.gross === "number" && totalEarnings !== payroll.gross) {
@@ -187,7 +200,17 @@ function buildValidationWarnings({ payroll, totalEarnings, totalDeductions, calc
     warnings.push("No deductions were found.");
   }
 
+  for (const [key, reference] of Object.entries(sourceReference)) {
+    if (reference?.source === null) {
+      warnings.push(`${prettyFieldName(key)} is missing from the uploaded payslip.`);
+    }
+  }
+
   return warnings;
+}
+
+function prettyFieldName(key) {
+  return key.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function money(amount, currency = "INR") {
